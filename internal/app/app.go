@@ -1,37 +1,33 @@
 package app
 
 import (
-	"fmt"
-	"log"
-	"net/http"
+	"context"
+
+	"github.com/jobquestvault/platform-go-challenge/internal/infra/http"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
 )
 
 type App struct {
-	server Server
-	//assetService AssetService
+	sys.Core
+	name   string
+	server *http.Server
+	//Service AssetService
 }
 
-type Server struct {
-	port     int
-	router   *http.ServeMux
-	handlers Handler
-}
-
-func NewServer(port int) *Server {
-	return &Server{
-		port:   port,
-		router: http.NewServeMux(),
+func NewApp(name string, log *log.BaseLogger, cfg *cfg.Config) *App {
+	return &App{
+		Core:   sys.NewCore(log, cfg),
+		name:   name,
+		server: http.NewServer(log, cfg),
 	}
 }
 
-func (s *Server) Setup() {
-	s.router.HandleFunc("/assets/", s.handleAssets)
-	s.router.HandleFunc("/favs/", s.handleFavs)
+func (app *App) Setup(ctx context.Context) {
+	app.server.Setup(ctx)
 }
 
-func (s *Server) Start() error {
-	addr := fmt.Sprintf(":%d", s.port)
-
-	log.Printf("Server listening on port %d\n", s.port)
-	return http.ListenAndServe(addr, nil)
+func (app *App) Start(ctx context.Context) error {
+	return app.server.Start(ctx)
 }

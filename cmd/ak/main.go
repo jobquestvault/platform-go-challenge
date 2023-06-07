@@ -1,17 +1,26 @@
 package main
 
 import (
-	"log"
+	"context"
 
 	a "github.com/jobquestvault/platform-go-challenge/internal/app"
+	c "github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
+	l "github.com/jobquestvault/platform-go-challenge/internal/sys/log"
+)
+
+const (
+	appName = "asset-keeper"
 )
 
 func main() {
-	server := a.NewServer(8080)
+	cfg := c.Load()
+	log := l.NewLogger(cfg.Log.Level)
+	app := a.NewApp(appName, log, cfg)
 
-	log.Println("Server starting...")
-	err := server.Start()
+	ctx := context.Background()
+	app.Setup(ctx)
+	err := app.Start(ctx)
 	if err != nil {
-		log.Fatalf("Server error: %s", err)
+		log.Error(err)
 	}
 }
