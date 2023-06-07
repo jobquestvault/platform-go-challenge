@@ -1,8 +1,8 @@
-package app
+package model
 
-// assets is a simple list of assets to be used in initial phase of development.
+// Assets is a simple list of assets to be used in initial phase of development.
 // Will be removed later.
-var assets = []Asset[Favorite]{
+var Assets = []Asset[Favorite]{
 	NewAsset("e54d8fde-ec90-494b-8f40-e66acfd40fec",
 		"sample-chart",
 		Chart{
