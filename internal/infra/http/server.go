@@ -7,11 +7,12 @@ import (
 
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
 )
 
 var (
-	MethodNotAllowedErr = sys.NewError("method not allowed")
+	MethodNotAllowedErr = errors.NewError("method not allowed")
 )
 
 type Server struct {
