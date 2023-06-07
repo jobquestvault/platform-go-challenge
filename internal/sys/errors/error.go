@@ -1,4 +1,4 @@
-package sys
+package errors
 
 import "fmt"
 
@@ -8,13 +8,17 @@ type (
 	}
 )
 
+var (
+	NotImplementedError = NewError("not implemented")
+)
+
 func NewError(msg string) Err {
 	return Err{
 		msg: msg,
 	}
 }
 
-func (e Err) String() string {
+func (e Err) Error() string {
 	return e.msg
 }
 
