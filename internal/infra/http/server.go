@@ -12,33 +12,51 @@ import (
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
 )
 
-var (
-	MethodNotAllowedErr = errors.NewError("method not allowed")
-)
-
 type Server struct {
 	sys.Core
+	http.Server
 	port     int
 	router   *http.ServeMux
 	handlers *Handler
 }
 
+var (
+	MethodNotAllowedErr = errors.NewError("method not allowed")
+)
+
+const (
+	apiV1 = "/api/v1"
+)
+
 func NewServer(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Server {
-	return &Server{
+	router := http.NewServeMux()
+
+	srv := Server{
 		Core:     sys.NewCore(log, cfg),
 		port:     cfg.Server.Port,
-		router:   http.NewServeMux(),
+		router:   router,
 		handlers: NewHandler(svc, log, cfg),
 	}
+
+	srv.Server = http.Server{
+		Addr:    srv.Address(),
+		Handler: router,
+	}
+
+	return &srv
+
 }
 
 func (s *Server) Setup(ctx context.Context) {
-	s.router.HandleFunc("/assets/", s.handlers.handleAssets)
-	s.router.HandleFunc("/favs/", s.handlers.handleFavs)
+	s.router.HandleFunc(apiV1+"/assets/", s.handlers.handleAssets)
+	s.router.HandleFunc(apiV1+"/favs/", s.handlers.handleFavs)
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	addr := fmt.Sprintf(":%d", s.port)
 	s.Log().Info("Server listening on port:", s.port)
-	return http.ListenAndServe(addr, nil)
+	return s.Server.ListenAndServe()
+}
+
+func (s *Server) Address() string {
+	return fmt.Sprintf(":%d", s.port)
 }

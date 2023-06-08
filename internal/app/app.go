@@ -41,6 +41,7 @@ func (app *App) Setup(ctx context.Context) {
 
 	// HTTP Server
 	app.http = http.NewServer(svc, log, cfg)
+	app.http.Setup(ctx)
 }
 
 func (app *App) Start(ctx context.Context) error {
