@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 
@@ -274,7 +275,7 @@ func (ar *AssetRepo) GetAssetss(ctx context.Context, status ...port.AssetStatus)
 		var (
 			chartID, chartName, chartTitle, xAxisTitle, yAxisTitle, insightID, insightName, insightText, insightTopic,
 			audienceID, audienceName, gender, birthCountry, ageGroup string
-			data                                    []float64
+			data                                    []uint8
 			hoursSpentOnSocial, numPurchasesLastMth int
 			favorite                                bool
 		)
@@ -361,26 +362,33 @@ func (ar *AssetRepo) UpdateFav(ctx context.Context, asset *model.Asset[model.Fav
 }
 
 func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...port.AssetStatus) (assets []model.Asset[model.Favable], err error) {
-	db, ok := ar.PgDB() // To get a sql.DB
+	db, ok := ar.PgDB()
 	if !ok {
-		return assets, NoConnectionError // This error is defined in another place, don't worry
+		return assets, NoConnectionError
 	}
 
-	query := "SELECT id, name, user_id, 'chart' AS type, title, x_axis_title, y_axis_title, data, favorite FROM ak.charts " +
-		"UNION ALL " +
-		"SELECT id, name, user_id, 'insight' AS type, text, topic, NULL, favorite FROM ak.insights " +
-		"UNION ALL " +
-		"SELECT id, name, user_id, 'audience' AS type, gender, birth_country, age_group, favorite FROM ak.audiences " +
-		"WHERE user_id = $1 "
-
+	var favCondition string
 	if len(status) > 0 {
 		switch status[0] {
 		case port.Faved:
-			query += "AND favorite = true "
+			favCondition = " AND favorite = TRUE "
 		case port.NotFaved:
-			query += "AND (favorite = false OR favorite IS NULL) "
+			favCondition = " AND (favorite = FALSE OR favorite IS NULL) "
 		}
 	}
+
+	query := fmt.Sprintf(`
+SELECT id, name, user_id, 'chart' AS type, title, x_axis_title, y_axis_title, data, favorite, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+FROM ak.charts
+WHERE user_id = $1%s
+UNION ALL
+SELECT id, name, user_id, 'insight' AS type, NULL, NULL, NULL, NULL, favorite, text, topic, NULL, NULL, NULL, NULL, NULL
+FROM ak.insights
+WHERE user_id = $1%s
+UNION ALL
+SELECT id, name, user_id, 'audience' AS type, NULL, NULL, NULL, NULL, favorite, NULL, NULL, gender, birth_country, age_group, NULL, NULL
+FROM ak.audiences
+WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
 
 	stmt, err := db.PrepareContext(ctx, query)
 	if err != nil {
@@ -404,7 +412,7 @@ func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...por
 			title               sql.NullString
 			xaxisTitle          sql.NullString
 			yaxisTitle          sql.NullString
-			data                []float64
+			data                []uint8
 			text                sql.NullString
 			topic               sql.NullString
 			gender              sql.NullString
@@ -414,7 +422,7 @@ func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...por
 			numPurchasesLastMth sql.NullInt64
 		)
 
-		err = rows.Scan(&id, &name, &userID, &assetType, &title, &xaxisTitle, &yaxisTitle, &data, &favorite, &text, &topic, &gender, &birthCountry, &ageGroup)
+		err = rows.Scan(&id, &name, &userID, &assetType, &title, &xaxisTitle, &yaxisTitle, &data, &favorite, &text, &topic, &gender, &birthCountry, &ageGroup, &hoursSpentOnSocial, &numPurchasesLastMth)
 		if err != nil {
 			return assets, err
 		}
@@ -430,6 +438,7 @@ func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...por
 				Favorite:   model.Favorite(favorite.Bool),
 			}
 			assets = append(assets, model.NewAsset(id, name, chart))
+
 		case "insight":
 			insight := model.Insight{
 				ID:       model.ID{ID: id, Name: name},
@@ -438,6 +447,7 @@ func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...por
 				Favorite: model.Favorite(favorite.Bool),
 			}
 			assets = append(assets, model.NewAsset(id, name, insight))
+
 		case "audience":
 			audience := model.Audience{
 				ID:                  model.ID{ID: id, Name: name},

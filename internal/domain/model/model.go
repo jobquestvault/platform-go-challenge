@@ -25,7 +25,7 @@ type Chart struct {
 	Title      string
 	XAxisTitle string
 	YAxisTitle string
-	Data       []float64
+	Data       []uint8
 	Favorite
 }
 
