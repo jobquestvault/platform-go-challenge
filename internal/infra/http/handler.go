@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/model"
+	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
@@ -13,12 +14,14 @@ import (
 type (
 	Handler struct {
 		sys.Core
+		service service.AssetService
 	}
 )
 
-func NewHandler(log log.Logger, cfg *cfg.Config) *Handler {
+func NewHandler(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Handler {
 	return &Handler{
-		Core: sys.NewCore(log, cfg),
+		Core:    sys.NewCore(log, cfg),
+		service: svc,
 	}
 }
 
