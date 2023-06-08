@@ -14,7 +14,7 @@ type App struct {
 	sys.Core
 	name    string
 	server  *http.Server
-	Service service.AssetService
+	service service.AssetService
 }
 
 func NewApp(name string, log *log.BaseLogger, cfg *cfg.Config) *App {
@@ -27,8 +27,13 @@ func NewApp(name string, log *log.BaseLogger, cfg *cfg.Config) *App {
 
 func (app *App) Setup(ctx context.Context) {
 	app.server.Setup(ctx)
+
 }
 
 func (app *App) Start(ctx context.Context) error {
 	return app.server.Start(ctx)
+}
+
+func (app *App) SetService(as service.AssetService) {
+	app.service = as
 }

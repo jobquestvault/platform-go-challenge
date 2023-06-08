@@ -2,9 +2,9 @@ package mongo
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -62,8 +62,8 @@ func (db *DB) DB() any {
 	return db.db
 }
 
-func (db *DB) mongoDB() (sqlDB *sqlx.DB, ok bool) {
-	sqlDB, ok = db.DB().(*sqlx.DB)
+func (db *DB) mongoDB() (sqlDB *sql.DB, ok bool) {
+	sqlDB, ok = db.DB().(*sql.DB)
 	if !ok {
 		return sqlDB, false
 	}
