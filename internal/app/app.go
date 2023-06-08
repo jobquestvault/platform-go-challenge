@@ -9,6 +9,7 @@ import (
 	pgr "github.com/jobquestvault/platform-go-challenge/internal/infra/repo/pg"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
 )
 
@@ -26,12 +27,16 @@ func NewApp(name string, log *log.BaseLogger, cfg *cfg.Config) *App {
 	}
 }
 
-func (app *App) Setup(ctx context.Context) {
+func (app *App) Setup(ctx context.Context) error {
 	log := app.Log()
 	cfg := app.Cfg()
 
 	// Databases
 	db := pg.NewDB(log, cfg)
+	err := db.Connect()
+	if err != nil {
+		return errors.Wrap("app setup error", err)
+	}
 
 	// Repo
 	repo := pgr.NewAssetRepo(db, log, cfg)
@@ -41,7 +46,8 @@ func (app *App) Setup(ctx context.Context) {
 
 	// HTTP Server
 	app.http = http.NewServer(svc, log, cfg)
-	app.http.Setup(ctx)
+
+	return app.http.Setup(ctx)
 }
 
 func (app *App) Start(ctx context.Context) error {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	a "github.com/jobquestvault/platform-go-challenge/internal/app"
 	c "github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
@@ -18,9 +19,16 @@ func main() {
 	app := a.NewApp(appName, log, cfg)
 
 	ctx := context.Background()
-	app.Setup(ctx)
-	err := app.Start(ctx)
+
+	err := app.Setup(ctx)
 	if err != nil {
 		log.Error(err)
+		os.Exit(1)
+	}
+
+	err = app.Start(ctx)
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
 	}
 }

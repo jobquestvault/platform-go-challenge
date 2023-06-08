@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/model"
+	"github.com/jobquestvault/platform-go-challenge/internal/domain/port"
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
@@ -59,7 +60,13 @@ func (h *Handler) getAssets(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(model.Assets)
+
+	userID := "c03dc326-7160-4b63-ac36-7105a4c96fa3"
+
+	repo := h.service.Repo()
+	assets, err := repo.GetAssets(r.Context(), userID, port.Faved)
+
+	err = json.NewEncoder(w).Encode(assets)
 	if err != nil {
 		// TODO: Implement after defining handling strategy
 	}

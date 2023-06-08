@@ -35,8 +35,9 @@ func (bs *BaseCore) Cfg() *cfg.Config {
 	return bs.cfg
 }
 
-func (bc *BaseCore) Setup(ctx context.Context) {
+func (bc *BaseCore) Setup(ctx context.Context) error {
 	bc.Log().Info("Default core setup")
+	return nil
 }
 
 func (bc *BaseCore) Start(ctx context.Context) error {

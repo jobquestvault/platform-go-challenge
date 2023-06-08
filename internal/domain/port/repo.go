@@ -14,10 +14,16 @@ type (
 
 	AssetRepo interface {
 		Repo
-		GetAssets(ctx context.Context) ([]model.Asset[model.Favorite], error)
-		GetFaved(ctx context.Context) ([]model.Asset[model.Favorite], error)
-		AddFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
-		RemoveFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
-		UpdateFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
+		GetAssets(ctx context.Context, userId string, status ...AssetStatus) (assets []model.Asset[model.Favable], err error)
+		AddFav(ctx context.Context, asset *model.Asset[model.Favable]) error
+		RemoveFav(ctx context.Context, asset *model.Asset[model.Favable]) error
+		UpdateFav(ctx context.Context, asset *model.Asset[model.Favable]) error
 	}
+
+	AssetStatus string
+)
+
+const (
+	Faved    AssetStatus = "Faved"
+	NotFaved AssetStatus = "NotFaved"
 )

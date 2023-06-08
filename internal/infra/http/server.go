@@ -47,9 +47,12 @@ func NewServer(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Serve
 
 }
 
-func (s *Server) Setup(ctx context.Context) {
+func (s *Server) Setup(ctx context.Context) error {
+	s.router.HandleFunc(apiV1+"/assets", s.handlers.handleAssets)
 	s.router.HandleFunc(apiV1+"/assets/", s.handlers.handleAssets)
+	s.router.HandleFunc(apiV1+"/favs", s.handlers.handleFavs)
 	s.router.HandleFunc(apiV1+"/favs/", s.handlers.handleFavs)
+	return nil
 }
 
 func (s *Server) Start(ctx context.Context) error {

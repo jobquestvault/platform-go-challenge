@@ -1,49 +1,75 @@
 package model
 
 type (
-	Favorite interface {
-		Faved() bool
+	Identifiable interface {
+		GetID() string
+		GetName() string
 	}
 
-	favorite bool
+	ID struct {
+		ID   string
+		Name string
+	}
 )
 
+func (id ID) GetID() string {
+	return id.ID
+}
+
+func (id ID) GetName() string {
+	return id.Name
+}
+
 type Chart struct {
-	ID         string
+	ID
 	Title      string
 	XAxisTitle string
 	YAxisTitle string
 	Data       []float64
-	favorite
-}
-
-func (i favorite) Faved() bool {
-	return bool(i)
+	Favorite
 }
 
 type Insight struct {
-	ID    string
+	ID
 	Text  string
 	Topic string
-	favorite
+	Favorite
 }
 
 type Audience struct {
-	ID                  string
+	ID
 	Gender              string
 	BirthCountry        string
 	AgeGroup            string
 	HoursSpentOnSocial  int
 	NumPurchasesLastMth int
-	favorite
+	Favorite
 }
 
-type Asset[T Favorite] struct {
-	ID   string
-	Name string
-	Data T
+type (
+	Favable interface {
+		Faved() bool
+	}
+
+	Favorite bool
+)
+
+func (i Favorite) Faved() bool {
+	return bool(i)
 }
 
-func NewAsset[T Favorite](id, name string, data T) Asset[Favorite] {
-	return Asset[Favorite]{ID: id, Name: name, Data: data}
+type (
+	FavableAsset interface {
+		Identifiable
+		Favable
+	}
+
+	Asset[T Favable] struct {
+		ID
+		Data T
+	}
+)
+
+func NewAsset[T Favable](id, name string, data T) Asset[Favable] {
+	return Asset[Favable]{ID: ID{ID: id, Name: name}, Data: data}
 }
