@@ -9,22 +9,22 @@ import (
 
 type (
 	AssetService interface {
-		Repo() port.Repo
+		Repo() port.AssetRepo
 	}
 
 	Asset struct {
 		sys.Core
-		repo port.Repo
+		repo port.AssetRepo
 	}
 )
 
-func NewService(repo port.Repo, log log.Logger, cfg *cfg.Config) *Asset {
+func NewService(repo port.AssetRepo, log log.Logger, cfg *cfg.Config) *Asset {
 	return &Asset{
 		Core: sys.NewCore(log, cfg),
 		repo: repo,
 	}
 }
 
-func (a Asset) Repo() port.Repo {
+func (a Asset) Repo() port.AssetRepo {
 	return a.repo
 }

@@ -43,6 +43,9 @@ func (db *DB) Connect() error {
 	}
 
 	db.Log().Info("Database connected:", db.Cfg().DB.Name)
+
+	db.db = pgdb
+
 	return nil
 }
 
@@ -56,5 +59,14 @@ func (db *DB) connString() (connString string) {
 	name := db.Cfg().DB.Name
 	host := db.Cfg().DB.Host
 	port := db.Cfg().DB.Port
-	return fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d sslmode=require", user, pass, name, host, port)
+
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d", user, pass, name, host, port)
+
+	if db.Cfg().DB.SSL {
+		connStr = connStr + " sslmode=require"
+	} else {
+		connStr = connStr + " sslmode=disable"
+	}
+
+	return connStr
 }

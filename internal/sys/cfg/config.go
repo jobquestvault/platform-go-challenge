@@ -23,7 +23,9 @@ type (
 		Port     int    `json:"port"`
 		Username string `json:"username"`
 		Password string `json:"password"`
+		Schema   string `json:"schema"`
 		Name     string `json:"name"`
+		SSL      bool   `json:"ssl"`
 	}
 )
 
@@ -41,7 +43,9 @@ func Load() *Config {
 	flag.IntVar(&config.DB.Port, "db-port", 5432, "Database port")
 	flag.StringVar(&config.DB.Username, "db-username", "admin", "Database username")
 	flag.StringVar(&config.DB.Password, "db-password", "password", "Database password")
+	flag.StringVar(&config.DB.Schema, "db-schema", "ak", "Database schema")
 	flag.StringVar(&config.DB.Name, "db-name", "ak", "Database name")
+	flag.BoolVar(&config.DB.SSL, "db-ssl", true, "Database use SSL")
 
 	flag.Parse()
 
