@@ -16,8 +16,8 @@ type (
 		Repo
 		GetAssets(ctx context.Context) ([]model.Asset[model.Favorite], error)
 		GetFaved(ctx context.Context) ([]model.Asset[model.Favorite], error)
-		AddFav(ctx context.Context, recipe *model.Asset[model.Favorite]) error
-		RemoveFav(ctx context.Context, recipe *model.Asset[model.Favorite]) error
-		UpdateFav(ctx context.Context, recipe *model.Asset[model.Favorite]) error
+		AddFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
+		RemoveFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
+		UpdateFav(ctx context.Context, asset *model.Asset[model.Favorite]) error
 	}
 )

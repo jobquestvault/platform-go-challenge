@@ -2,9 +2,8 @@ package pg
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-
-	"github.com/jmoiron/sqlx"
 
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
@@ -15,7 +14,7 @@ import (
 type (
 	DB struct {
 		sys.Core
-		db *sqlx.DB
+		db *sql.DB
 	}
 )
 
@@ -31,7 +30,7 @@ func (db *DB) Start(ctx context.Context) error {
 }
 
 func (db *DB) Connect() error {
-	pgdb, err := sqlx.Open("postgres", db.connString())
+	pgdb, err := sql.Open("postgres", db.connString())
 	if err != nil {
 		msg := fmt.Sprintf("%s connection error", db.Cfg().DB.Name)
 		return errors.Wrap(msg, err)
