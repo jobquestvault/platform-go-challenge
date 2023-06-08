@@ -10,7 +10,7 @@ var Assets = []Asset[Favable]{
 			Title:      "Revenue",
 			XAxisTitle: "Time",
 			YAxisTitle: "Revenue",
-			Data:       []float64{1, 20, 2, 21, 3, 22, 4, 23, 5, 24, 6, 25, 7, 26, 8, 27, 9, 28, 10, 29},
+			Data:       []uint8{1, 20, 2, 21, 3, 22, 4, 23, 5, 24, 6, 25, 7, 26, 8, 27, 9, 28, 10, 29},
 			Favorite:   true,
 		},
 	),
