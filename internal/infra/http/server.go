@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
@@ -19,14 +20,15 @@ type Server struct {
 	sys.Core
 	port     int
 	router   *http.ServeMux
-	handlers Handler
+	handlers *Handler
 }
 
-func NewServer(log log.Logger, cfg *cfg.Config) *Server {
+func NewServer(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Server {
 	return &Server{
-		Core:   sys.NewCore(log, cfg),
-		port:   cfg.Server.Port,
-		router: http.NewServeMux(),
+		Core:     sys.NewCore(log, cfg),
+		port:     cfg.Server.Port,
+		router:   http.NewServeMux(),
+		handlers: NewHandler(svc, log, cfg),
 	}
 }
 
