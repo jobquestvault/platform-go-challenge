@@ -15,9 +15,9 @@ type (
 	AssetRepo interface {
 		Repo
 		GetAssets(ctx context.Context, userId string, status ...AssetStatus) (assets []model.Asset[model.Favable], err error)
-		AddFav(ctx context.Context, asset *model.Asset[model.Favable]) error
-		RemoveFav(ctx context.Context, asset *model.Asset[model.Favable]) error
-		UpdateFav(ctx context.Context, asset *model.Asset[model.Favable]) error
+		AddFav(ctx context.Context, userID, assetType, ID string) error
+		RemoveFav(ctx context.Context, userID, assetType, ID string) error
+		UpdateFav(ctx context.Context, userID, assetType, ID, name string) error
 	}
 
 	AssetStatus string

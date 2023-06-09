@@ -2,7 +2,9 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -33,25 +35,34 @@ func NewHandler(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Hand
 func (h *Handler) handleAPIV1(w http.ResponseWriter, r *http.Request) {
 	pathSegments := strings.Split(r.URL.Path, "/")
 
-	uuidIndex := -1
+	userIDIndex := -1
 	for i, segment := range pathSegments {
 		_, err := uuid.Parse(segment)
 		if err == nil {
-			uuidIndex = i
+			userIDIndex = i
 			break
 		}
 	}
 
-	if uuidIndex == -1 {
+	if userIDIndex == -1 {
 		http.NotFound(w, r)
 		return
 	}
 
-	uuidSegment := pathSegments[uuidIndex]
-	ctx := context.WithValue(r.Context(), UserCtxKey, uuidSegment)
+	userIDSegment := pathSegments[userIDIndex]
+	ctx := context.WithValue(r.Context(), UserIDCtxKey, userIDSegment)
 	r = r.WithContext(ctx)
 
-	resource := strings.ToLower(pathSegments[uuidIndex+1])
+	resIDSegment := pathSegments[len(pathSegments)-1]
+	resID, err := uuid.Parse(resIDSegment)
+	if err != nil {
+		h.Log().Debug("Not a resource URL:", r.URL.Path)
+	}
+
+	ctx = context.WithValue(ctx, ResIDCtxKey, resID)
+	r = r.WithContext(ctx)
+
+	resource := strings.ToLower(pathSegments[userIDIndex+1])
 
 	switch resource {
 	case "assets":
@@ -67,6 +78,8 @@ func (h *Handler) handleAssets(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.getAssets(w, r)
+	case http.MethodPut:
+		h.updateAsset(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		h.handleError(w, MethodNotAllowedErr)
@@ -77,10 +90,7 @@ func (h *Handler) handleFavs(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.getFaved(w, r)
-	case http.MethodPut:
-		h.updateFav(w, r)
-	case http.MethodDelete:
-		h.removeFav(w, r)
+
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		h.handleError(w, MethodNotAllowedErr)
@@ -91,15 +101,17 @@ func (h *Handler) getAssets(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(r)
 	if !ok {
 		h.handleError(w, NoUserErr)
+		return
 	}
 
 	repo := h.service.Repo()
 	assets, err := repo.GetAssets(r.Context(), userID)
 	if err != nil {
 		h.handleError(w, errors.Wrap("get assets error", err))
+		return
 	}
 
-	msg := fmt.Sprintf("Reg. count: %d", len(assets))
+	msg := fmt.Sprintf("count: %d", len(assets))
 
 	h.handleSuccess(w, assets, msg)
 }
@@ -108,30 +120,97 @@ func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(r)
 	if !ok {
 		h.handleError(w, NoUserErr)
+		return
 	}
 
 	repo := h.service.Repo()
 	assets, err := repo.GetAssets(r.Context(), userID, port.Faved)
 	if err != nil {
 		h.handleError(w, errors.Wrap("get faved error", err))
+		return
 	}
 
-	msg := fmt.Sprintf("Reg. count: %d", len(assets))
+	msg := fmt.Sprintf("count: %d", len(assets))
 
 	h.handleSuccess(w, assets, msg)
 }
 
 func (h *Handler) addFav(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "/favorites/add" endpoint
-	panic("not implemented yet")
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
+	}
+
+	resID, ok := h.resourceID(r)
+	if !ok {
+		h.handleError(w, NoResourceErr)
+		return
+	}
+
+	req, ok := h.assetReq(r)
+	if !ok {
+		h.handleError(w, NoAssetReqErr)
+		return
+	}
+
+	repo := h.service.Repo()
+	err := repo.AddFav(r.Context(), userID, resID, req.Type)
+
+	if err != nil {
+		h.handleError(w, errors.Wrap("add fav error", err))
+		return
+	}
+
+	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, struct{}{})
+}
+
+func (h *Handler) updateAsset(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleError(w, InvalidRequestErr)
+	}
+
+	var req AssetRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		h.handleError(w, InvalidRequestDataErr)
+	}
+
+	ctx := context.WithValue(r.Context(), AssetReqCtxKey, req)
+	r = r.WithContext(ctx)
+
+	switch req.Action {
+	case "fav":
+		h.favAsset(w, r)
+	case "unfav":
+		h.unfavAsset(w, r)
+	case "update":
+		h.updateName(w, r)
+	case "delete":
+		h.removeFav(w, r)
+	default:
+		http.Error(w, "Invalid action", http.StatusBadRequest)
+	}
+}
+
+func (h *Handler) favAsset(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement handling for "fav" action
+	panic("fav")
+}
+
+func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement handling for "unfav" action
+	panic("unfav")
 }
 
 func (h *Handler) removeFav(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "/favorites/remove" endpoint
-	panic("not implemented yet")
+	// TODO: Implement handling for "delete" action
+	panic("remove")
 }
 
-func (h *Handler) updateFav(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "/favorites/edit" endpoint
-	panic("not implemented yet")
+func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement handling for "update" action
+	panic("update")
 }
