@@ -9,6 +9,7 @@ import (
 
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/model"
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/port"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 )
 
 // Charts
@@ -234,130 +235,45 @@ func (ar *AssetRepo) DeleteAudience(ctx context.Context, id string) error {
 	return err
 }
 
-// GetAssets retrieves all assets from the database
-func (ar *AssetRepo) GetAssetss(ctx context.Context, status ...port.AssetStatus) (assets []model.Asset[model.Favable], err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return assets, NoConnectionError
-	}
-
-	query := `
-		SELECT
-			c.id AS chart_id, c.title AS chart_title, c.x_axis_title, c.y_axis_title, c.data,
-			i.id AS insight_id, i.text AS insight_text, i.topic,
-			a.id AS audience_id, a.gender, a.birth_country, a.age_group, a.hours_spent_on_social, a.num_purchases_last_mth,
-			f.favorite
-		FROM ak.charts c
-		LEFT JOIN ak.insights i ON c.id = i.insight_id
-		LEFT JOIN ak.audiences a ON c.id = a.audience_id
-		LEFT JOIN favorites f ON f.entity_id = COALESCE(c.id, i.id, a.id) 
-	`
-
-	if len(status) > 0 {
-		switch status[0] {
-		case port.Faved:
-			query = query + "WHERE f.favorite == TRUE"
-		case port.NotFaved:
-			query = query + "WHERE f.favorite == FALSE"
-		}
-	}
-
-	rows, err := db.Query(query)
-	if err != nil {
-		panic(err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Iterate through the result rows
-	for rows.Next() {
-		// Variables to hold the retrieved data
-		var (
-			chartID, chartName, chartTitle, xAxisTitle, yAxisTitle, insightID, insightName, insightText, insightTopic,
-			audienceID, audienceName, gender, birthCountry, ageGroup string
-			data                                    []uint8
-			hoursSpentOnSocial, numPurchasesLastMth int
-			favorite                                bool
-		)
-
-		// Scan the row values into the variables
-		err := rows.Scan(
-			&chartID, &chartName, &chartTitle, &xAxisTitle, &yAxisTitle, pq.Array(&data),
-			&insightID, &insightName, &insightText, &insightTopic,
-			&audienceID, &audienceName, &gender, &birthCountry, &ageGroup, &hoursSpentOnSocial, &numPurchasesLastMth,
-			&favorite,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// Construct the appropriate fa struct based on the retrieved values
-		var fa model.FavableAsset
-		switch {
-		case chartID != "":
-			fa = model.Chart{
-				ID:         model.ID{ID: chartID, Name: chartName},
-				Title:      chartTitle,
-				XAxisTitle: xAxisTitle,
-				YAxisTitle: yAxisTitle,
-				Data:       data,
-			}
-		case insightID != "":
-			fa = model.Insight{
-				ID:    model.ID{ID: insightID, Name: insightName},
-				Text:  insightText,
-				Topic: insightTopic,
-			}
-		case audienceID != "":
-			fa = model.Audience{
-				ID:                  model.ID{ID: audienceID, Name: audienceName},
-				Gender:              gender,
-				BirthCountry:        birthCountry,
-				AgeGroup:            ageGroup,
-				HoursSpentOnSocial:  hoursSpentOnSocial,
-				NumPurchasesLastMth: numPurchasesLastMth,
-			}
-		}
-
-		// Create the Asset object and set the favorite field
-		asset := model.Asset[model.Favable]{
-			ID: model.ID{
-				ID:   fa.GetID(),
-				Name: fa.GetName(),
-			},
-			Data: fa,
-		}
-
-		// Set the favorite field based on the retrieved value
-		//if favorite {
-		//	asset.favorite = true
-		//}
-
-		// Append the asset to the slice
-		assets = append(assets, asset)
-	}
-
-	// Check for any errors during the iteration
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	// Return the retrieved assets
-	return assets, nil
-}
-
 // AddFav mark an asset as faved
-func (ar *AssetRepo) AddFav(ctx context.Context, asset *model.Asset[model.Favable]) error {
-	return nil
+func (ar *AssetRepo) AddFav(ctx context.Context, userID, assetType, ID string) error {
+	return ar.setFav(ctx, userID, assetType, ID, true)
 }
 
 // RemoveFav mark an asset as not faved
-func (ar *AssetRepo) RemoveFav(ctx context.Context, asset *model.Asset[model.Favable]) error {
+func (ar *AssetRepo) RemoveFav(ctx context.Context, userID, assetType, ID string) error {
+	return ar.setFav(ctx, userID, assetType, ID, false)
+}
+
+// AddFav mark an asset as faved
+func (ar *AssetRepo) setFav(ctx context.Context, userID, assetType, ID string, favVal bool) error {
+	err := ar.validateAssetType(assetType)
+	if err != nil {
+		return errors.Wrap("set fav value error", err)
+	}
+
+	var table string
+	table, err = ar.assetTable(assetType)
+	if err != nil {
+		return errors.Wrap("set fav value error", err)
+	}
+
+	db, ok := ar.PgDB()
+	if !ok {
+		return NoConnectionError
+	}
+
+	query := fmt.Sprintf("UPDATE ak.%s SET favorite = $3 WHERE id = $1 AND user_id = $2", table)
+	_, err = db.ExecContext(ctx, query, ID, userID, favVal)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // UpdateFav updates asset name
-func (ar *AssetRepo) UpdateFav(ctx context.Context, asset *model.Asset[model.Favable]) error {
+func (ar *AssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, name string) error {
 	return nil
 }
 
@@ -467,4 +383,33 @@ WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
 	}
 
 	return assets, nil
+}
+
+func (ar *AssetRepo) validateAssetType(assetType string) error {
+	validAssetTypes := map[string]bool{
+		"chart":    true,
+		"insight":  true,
+		"audience": true,
+	}
+
+	if !validAssetTypes[assetType] {
+		msg := fmt.Sprintf("invalid asset type: %s", assetType)
+		return errors.NewError(msg)
+	}
+
+	return nil
+}
+
+func (ar *AssetRepo) assetTable(assetType string) (table string, err error) {
+	switch assetType {
+	case "chart":
+		return "charts", nil
+	case "insight":
+		return "insights", nil
+	case "audience":
+		return "audiences", nil
+	default:
+		msg := fmt.Sprintf("invalid asset type: %s", assetType)
+		return table, errors.NewError(msg)
+	}
 }

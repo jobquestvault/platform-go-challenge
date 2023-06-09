@@ -13,16 +13,14 @@ type APIResponse struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-type ContextKey string
-
-const (
-	UserCtxKey = "user"
-)
-
 var (
-	MethodNotAllowedErr = errors.NewError("method not allowed")
-	InvalidResourceErr  = errors.NewError("invalid resource")
-	NoUserErr           = errors.NewError("no user provided")
+	MethodNotAllowedErr   = errors.NewError("method not allowed")
+	InvalidResourceErr    = errors.NewError("invalid resource")
+	NoUserErr             = errors.NewError("no user ID provided")
+	NoResourceErr         = errors.NewError("no resource ID provided")
+	NoAssetReqErr         = errors.NewError("no asset request provided")
+	InvalidRequestErr     = errors.NewError("invalid request")
+	InvalidRequestDataErr = errors.NewError("invalid request data")
 )
 
 func (h *Handler) handleSuccess(w http.ResponseWriter, payload interface{}, msg ...string) {
@@ -61,18 +59,4 @@ func (h *Handler) handleError(w http.ResponseWriter, handlerError error) {
 	}
 
 	return
-}
-
-func (h *Handler) userID(r *http.Request) (userID string, ok bool) {
-	value := r.Context().Value(UserCtxKey)
-	if value == nil {
-		return userID, false
-	}
-
-	userId, ok := value.(string)
-	if !ok {
-		return userId, false
-	}
-
-	return userId, true
 }

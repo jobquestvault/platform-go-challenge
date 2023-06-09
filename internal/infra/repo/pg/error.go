@@ -3,5 +3,6 @@ package pg
 import "github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 
 var (
-	NoConnectionError = errors.NewError("no connection error")
+	NoConnectionError     = errors.NewError("no connection error")
+	UnsupportedAssetError = errors.NewError("unsupported asset type")
 )
