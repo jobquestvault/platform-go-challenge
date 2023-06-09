@@ -68,7 +68,7 @@ $ sh scripts/curl/favunfav.sh unfav 32f92457-de96-4f0f-bfd1-9a382a198fd2
 
 ### Update name of a faved asset
 ```
-$ sh scripts/curl/update.sh 32f92457-de96-4f0f-bfd1-9a382a198fd2 new-name
+$ scripts/curl/updatefavedname.sh
 {"success":true,"data":{}}
 ```
 

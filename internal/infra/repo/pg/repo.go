@@ -18,7 +18,7 @@ import (
 func (ar *AssetRepo) GetAllCharts(ctx context.Context) (charts []model.Chart, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return charts, NoConnectionError
+		return charts, NoConnectionErr
 	}
 
 	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.charts")
@@ -43,7 +43,7 @@ func (ar *AssetRepo) GetAllCharts(ctx context.Context) (charts []model.Chart, er
 func (ar *AssetRepo) GetChartByID(ctx context.Context, id string) (chart model.Chart, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return chart, NoConnectionError
+		return chart, NoConnectionErr
 	}
 
 	err = db.QueryRowContext(ctx, "SELECT * FROM ak.charts WHERE id = $1", id).Scan(&chart.ID, &chart.Title, &chart.XAxisTitle, &chart.YAxisTitle, pq.Array(&chart.Data), chart.Faved())
@@ -57,7 +57,7 @@ func (ar *AssetRepo) GetChartByID(ctx context.Context, id string) (chart model.C
 func (ar *AssetRepo) CreateChart(ctx context.Context, chart model.Chart) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "INSERT INTO ak.charts (id, title, x_axis_title, y_axis_title, data, favorite) VALUES ($1, $2, $3, $4, $5, $6)", chart.ID, chart.Title, chart.XAxisTitle, chart.YAxisTitle, pq.Array(chart.Data), chart.Faved())
@@ -68,7 +68,7 @@ func (ar *AssetRepo) CreateChart(ctx context.Context, chart model.Chart) error {
 func (ar *AssetRepo) UpdateChart(ctx context.Context, chart model.Chart) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "UPDATE ak.charts SET title = $2, x_axis_title = $3, y_axis_title = $4, data = $5, favorite = $6 WHERE id = $1", chart.ID, chart.Title, chart.XAxisTitle, chart.YAxisTitle, pq.Array(chart.Data), chart.Faved())
@@ -79,7 +79,7 @@ func (ar *AssetRepo) UpdateChart(ctx context.Context, chart model.Chart) error {
 func (ar *AssetRepo) DeleteChart(ctx context.Context, id string) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "DELETE FROM ak.charts WHERE id = $1", id)
@@ -92,7 +92,7 @@ func (ar *AssetRepo) DeleteChart(ctx context.Context, id string) error {
 func (ar *AssetRepo) GetAllInsights(ctx context.Context) (insight []model.Insight, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return insight, NoConnectionError
+		return insight, NoConnectionErr
 	}
 
 	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.insights")
@@ -118,7 +118,7 @@ func (ar *AssetRepo) GetAllInsights(ctx context.Context) (insight []model.Insigh
 func (ar *AssetRepo) GetInsightByID(ctx context.Context, id string) (insight model.Insight, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return insight, NoConnectionError
+		return insight, NoConnectionErr
 	}
 
 	err = db.QueryRowContext(ctx, "SELECT * FROM ak.insights WHERE id = $1", id).Scan(&insight.ID, &insight.Text, &insight.Topic, insight.Faved())
@@ -132,7 +132,7 @@ func (ar *AssetRepo) GetInsightByID(ctx context.Context, id string) (insight mod
 func (ar *AssetRepo) CreateInsight(ctx context.Context, insight model.Insight) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "INSERT INTO ak.insights (id, text, topic, favorite) VALUES ($1, $2, $3, $4)", insight.ID, insight.Text, insight.Topic, insight.Faved())
@@ -143,7 +143,7 @@ func (ar *AssetRepo) CreateInsight(ctx context.Context, insight model.Insight) e
 func (ar *AssetRepo) UpdateInsight(ctx context.Context, insight model.Insight) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "UPDATE ak.insights SET text = $2, topic = $3, favorite = $4 WHERE id = $1", insight.ID, insight.Text, insight.Topic, insight.Faved())
@@ -154,7 +154,7 @@ func (ar *AssetRepo) UpdateInsight(ctx context.Context, insight model.Insight) e
 func (ar *AssetRepo) DeleteInsight(ctx context.Context, id string) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "DELETE FROM ak.insights WHERE id = $1", id)
@@ -167,7 +167,7 @@ func (ar *AssetRepo) DeleteInsight(ctx context.Context, id string) error {
 func (ar *AssetRepo) GetAllAudiences(ctx context.Context) (audiences []model.Audience, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return nil, NoConnectionError
+		return nil, NoConnectionErr
 	}
 
 	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.audiences")
@@ -192,7 +192,7 @@ func (ar *AssetRepo) GetAllAudiences(ctx context.Context) (audiences []model.Aud
 func (ar *AssetRepo) GetAudienceByID(ctx context.Context, id string) (audience model.Audience, err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return audience, NoConnectionError
+		return audience, NoConnectionErr
 	}
 
 	err = db.QueryRowContext(ctx, "SELECT * FROM ak.audiences WHERE id = $1", id).Scan(&audience.ID, &audience.Gender, &audience.BirthCountry, &audience.AgeGroup, &audience.HoursSpentOnSocial, &audience.NumPurchasesLastMth, audience.Faved())
@@ -206,7 +206,7 @@ func (ar *AssetRepo) GetAudienceByID(ctx context.Context, id string) (audience m
 func (ar *AssetRepo) CreateAudience(ctx context.Context, audience model.Audience) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "INSERT INTO ak.audiences (id, gender, birth_country, age_group, hours_spent_on_social, num_purchases_last_mth, favorite) VALUES ($1, $2, $3, $4, $5, $6, $7)", audience.ID, audience.Gender, audience.BirthCountry, audience.AgeGroup, audience.HoursSpentOnSocial, audience.NumPurchasesLastMth, audience.Faved())
@@ -217,7 +217,7 @@ func (ar *AssetRepo) CreateAudience(ctx context.Context, audience model.Audience
 func (ar *AssetRepo) UpdateAudience(ctx context.Context, audience model.Audience) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "UPDATE ak.audiences SET gender = $2, birth_country = $3, age_group = $4, hours_spent_on_social = $5, num_purchases_last_mth = $6, favorite = $7 WHERE id = $1", audience.ID, audience.Gender, audience.BirthCountry, audience.AgeGroup, audience.HoursSpentOnSocial, audience.NumPurchasesLastMth, audience.Faved())
@@ -228,7 +228,7 @@ func (ar *AssetRepo) UpdateAudience(ctx context.Context, audience model.Audience
 func (ar *AssetRepo) DeleteAudience(ctx context.Context, id string) error {
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	_, err := db.ExecContext(ctx, "DELETE FROM ak.audiences WHERE id = $1", id)
@@ -260,13 +260,14 @@ func (ar *AssetRepo) setFav(ctx context.Context, userID, assetType, ID string, f
 
 	db, ok := ar.PgDB()
 	if !ok {
-		return NoConnectionError
+		return NoConnectionErr
 	}
 
 	query := fmt.Sprintf("UPDATE ak.%s SET favorite = $3 WHERE id = $1 AND user_id = $2", table)
 	_, err = db.ExecContext(ctx, query, ID, userID, favVal)
 	if err != nil {
-		return err
+		return errors.Wrap("set fav repo error", err)
+
 	}
 
 	return nil
@@ -274,13 +275,44 @@ func (ar *AssetRepo) setFav(ctx context.Context, userID, assetType, ID string, f
 
 // UpdateFav updates asset name
 func (ar *AssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, name string) error {
+	db, ok := ar.PgDB()
+	if !ok {
+		return NoConnectionErr
+	}
+
+	// Update the name of the favorited asset
+	assetTable, err := ar.assetTable(assetType)
+	if err != nil {
+		return UnsupportedAssetErr
+	}
+
+	updateQuery := `
+		UPDATE ` + assetTable + ` AS a
+		SET name = $1
+		FROM ak.users AS u
+		WHERE a.id = $2 AND a.favorite = TRUE AND a.user_id = u.id AND u.id = $3
+	`
+	result, err := db.ExecContext(ctx, updateQuery, name, ID, userID)
+	if err != nil {
+		return errors.Wrap("update fav repo error", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap("update fav repo error", err)
+	}
+
+	if rowsAffected == 0 {
+		return NoRecordsAffectedErr
+	}
+
 	return nil
 }
 
 func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...port.AssetStatus) (assets []model.Asset[model.Favable], err error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return assets, NoConnectionError
+		return assets, NoConnectionErr
 	}
 
 	var favCondition string
