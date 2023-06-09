@@ -67,7 +67,7 @@ func (h *Handler) handleAPIV1(w http.ResponseWriter, r *http.Request) {
 	switch resource {
 	case "assets":
 		h.handleAssets(w, r)
-	case "favs":
+	case "faved":
 		h.handleFavs(w, r)
 	default:
 		h.handleError(w, InvalidResourceErr)
@@ -90,7 +90,8 @@ func (h *Handler) handleFavs(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.getFaved(w, r)
-
+	case http.MethodPut:
+		h.updateAsset(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		h.handleError(w, MethodNotAllowedErr)
@@ -225,6 +226,32 @@ func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "update" action
-	panic("update")
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
+	}
+
+	resID, ok := h.resourceID(r)
+	if !ok {
+		h.handleError(w, NoResourceErr)
+		return
+	}
+
+	req, ok := h.assetReq(r)
+	if !ok {
+		h.handleError(w, NoAssetReqErr)
+		return
+	}
+
+	repo := h.service.Repo()
+	err := repo.UpdateFav(r.Context(), userID, req.Type, resID, req.Name)
+
+	if err != nil {
+		h.handleError(w, errors.Wrap("update fav error", err))
+		return
+	}
+
+	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, struct{}{})
 }
