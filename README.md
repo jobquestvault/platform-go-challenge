@@ -20,8 +20,81 @@ Examples of libraries commonly used in various projects include [Zerolog](https:
 We have strived to minimize reliance on external dependencies by leveraging the features provided by the Go Standard Library that in their usage, share conceptual similarities.
 
 ## Usage
+### Run the app
+```
+$ make run
+```
 
-[To be completed]
+### Get all assets
+Charts, Insights and Audiences; both faved and not faved. (*)
+```
+$ ./scripts/curl/getassets.sh pretty
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  7761    0  7761    0     0  1901k      0 --:--:-- --:--:-- --:--:-- 2526k
+{
+  "success": true,
+  "message": "count: 30",
+  "data": [
+    {
+      "ID": "32f92457-de96-4f0f-bfd1-9a382a198fd2",
+      "Name": "Chart 1",
+      "Type": "chart",
+      "Data": {
+        "ID": "32f92457-de96-4f0f-bfd1-9a382a198fd2",
+        "Name": "Chart 1",
+        "Title": "Title 1",
+        "XAxisTitle": "X-Axis Title 1",
+        "YAxisTitle": "Y-Axis Title 1",
+        "Data": "ezEuMCwyLjAsMy4wfQ==",
+        "Favorite": false
+      }
+    },
+
+```
+
+### Fav an asset
+```
+$ sh scripts/curl/favunfav.sh fav 32f92457-de96-4f0f-bfd1-9a382a198fd2
+{"success":true,"data":{}}
+```
+
+### Unfav an asset
+```
+$ sh scripts/curl/favunfav.sh unfav 32f92457-de96-4f0f-bfd1-9a382a198fd2
+{"success":true,"data":{}}
+```
+
+### Update name of a faved asset
+```
+$ sh scripts/curl/update.sh 32f92457-de96-4f0f-bfd1-9a382a198fd2 new-name
+{"success":true,"data":{}}
+```
+
+(*) If jq is not installed in your system remove the `pretty` flag.
+You can also opt installing `jq` first.
+This is how you do it:
+
+* Debian / Ubuntu
+```
+$ sudo aptitude install jq
+```
+
+* Arch / Manjaro
+```
+$ sudo pacman -Sy jq
+```
+
+* RedHat / CentOS
+```
+$ yum install epel-release -y
+...
+$ yum update -y 
+...
+$ yum install jq -y
+...
+```
 
 ## Notes
 
