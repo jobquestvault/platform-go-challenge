@@ -1,14 +1,18 @@
 package http
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/jobquestvault/platform-go-challenge/internal/domain/model"
+	"github.com/google/uuid"
+
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/port"
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
+	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/log"
 )
 
@@ -26,13 +30,46 @@ func NewHandler(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Hand
 	}
 }
 
+func (h *Handler) handleAPIV1(w http.ResponseWriter, r *http.Request) {
+	pathSegments := strings.Split(r.URL.Path, "/")
+
+	uuidIndex := -1
+	for i, segment := range pathSegments {
+		_, err := uuid.Parse(segment)
+		if err == nil {
+			uuidIndex = i
+			break
+		}
+	}
+
+	if uuidIndex == -1 {
+		http.NotFound(w, r)
+		return
+	}
+
+	uuidSegment := pathSegments[uuidIndex]
+	ctx := context.WithValue(r.Context(), UserCtxKey, uuidSegment)
+	r = r.WithContext(ctx)
+
+	resource := strings.ToLower(pathSegments[uuidIndex+1])
+
+	switch resource {
+	case "assets":
+		h.handleAssets(w, r)
+	case "favs":
+		h.handleFavs(w, r)
+	default:
+		h.handleError(w, InvalidResourceErr)
+	}
+}
+
 func (h *Handler) handleAssets(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.getAssets(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		h.Log().Error(MethodNotAllowedErr)
+		h.handleError(w, MethodNotAllowedErr)
 	}
 }
 
@@ -46,30 +83,42 @@ func (h *Handler) handleFavs(w http.ResponseWriter, r *http.Request) {
 		h.removeFav(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		h.Log().Error(MethodNotAllowedErr)
+		h.handleError(w, MethodNotAllowedErr)
 	}
 }
 
 func (h *Handler) getAssets(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(model.Assets)
-	if err != nil {
-		// TODO: Implement after defining handling strategy
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
 	}
+
+	repo := h.service.Repo()
+	assets, err := repo.GetAssets(r.Context(), userID)
+	if err != nil {
+		h.handleError(w, errors.Wrap("get assets error", err))
+	}
+
+	msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, assets, msg)
 }
 
 func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	userID := "c03dc326-7160-4b63-ac36-7105a4c96fa3"
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
+	}
 
 	repo := h.service.Repo()
 	assets, err := repo.GetAssets(r.Context(), userID, port.Faved)
-
-	err = json.NewEncoder(w).Encode(assets)
 	if err != nil {
-		// TODO: Implement after defining handling strategy
+		h.handleError(w, errors.Wrap("get faved error", err))
 	}
+
+	msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, assets, msg)
 }
 
 func (h *Handler) addFav(w http.ResponseWriter, r *http.Request) {
