@@ -20,7 +20,7 @@ type Server struct {
 }
 
 const (
-	apiV1 = "/api/v1"
+	apiV1 = "/api/v1/"
 )
 
 func NewServer(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Server {
@@ -43,7 +43,8 @@ func NewServer(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Serve
 
 func (s *Server) Setup(ctx context.Context) error {
 	s.router.HandleFunc(apiV1, s.handlers.handleAPIV1)
-	s.router.HandleFunc(apiV1+"/", s.handlers.handleAPIV1)
+	s.router.HandleFunc("/livez", s.handlers.handleLiveness)
+	s.router.HandleFunc("/readyz", s.handlers.handleReadiness)
 	return nil
 }
 

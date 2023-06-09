@@ -22,13 +22,21 @@ type (
 	Handler struct {
 		sys.Core
 		service service.AssetService
+		*Probes
 	}
 )
+
+type (
+	EmptyResponse string
+)
+
+const emptyRes = ""
 
 func NewHandler(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Handler {
 	return &Handler{
 		Core:    sys.NewCore(log, cfg),
 		service: svc,
+		Probes:  NewProbes(),
 	}
 }
 
@@ -191,7 +199,7 @@ func (h *Handler) favAsset(w http.ResponseWriter, r *http.Request) {
 
 	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
 
-	h.handleSuccess(w, struct{}{})
+	h.handleSuccess(w, emptyRes)
 }
 
 func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +230,7 @@ func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
 
 	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
 
-	h.handleSuccess(w, struct{}{})
+	h.handleSuccess(w, emptyRes)
 }
 
 func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
@@ -253,5 +261,5 @@ func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
 
 	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
 
-	h.handleSuccess(w, struct{}{})
+	h.handleSuccess(w, emptyRes)
 }
