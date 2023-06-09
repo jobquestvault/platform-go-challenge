@@ -2,6 +2,8 @@ package http
 
 import (
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type ContextKey string
@@ -38,12 +40,12 @@ func (h *Handler) resourceID(r *http.Request) (resID string, ok bool) {
 		return resID, false
 	}
 
-	resID, ok = value.(string)
+	id, ok := value.(uuid.UUID)
 	if !ok {
 		return resID, false
 	}
 
-	return resID, true
+	return id.String(), true
 }
 
 func (h *Handler) assetReq(r *http.Request) (req AssetRequest, ok bool) {

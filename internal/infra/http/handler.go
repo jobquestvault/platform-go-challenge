@@ -59,7 +59,7 @@ func (h *Handler) handleAPIV1(w http.ResponseWriter, r *http.Request) {
 		h.Log().Debug("Not a resource URL:", r.URL.Path)
 	}
 
-	ctx = context.WithValue(ctx, ResIDCtxKey, resID)
+	ctx = context.WithValue(r.Context(), ResIDCtxKey, resID)
 	r = r.WithContext(ctx)
 
 	resource := strings.ToLower(pathSegments[userIDIndex+1])
@@ -135,37 +135,6 @@ func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
 	h.handleSuccess(w, assets, msg)
 }
 
-func (h *Handler) addFav(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.userID(r)
-	if !ok {
-		h.handleError(w, NoUserErr)
-	}
-
-	resID, ok := h.resourceID(r)
-	if !ok {
-		h.handleError(w, NoResourceErr)
-		return
-	}
-
-	req, ok := h.assetReq(r)
-	if !ok {
-		h.handleError(w, NoAssetReqErr)
-		return
-	}
-
-	repo := h.service.Repo()
-	err := repo.AddFav(r.Context(), userID, resID, req.Type)
-
-	if err != nil {
-		h.handleError(w, errors.Wrap("add fav error", err))
-		return
-	}
-
-	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
-
-	h.handleSuccess(w, struct{}{})
-}
-
 func (h *Handler) updateAsset(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -188,26 +157,71 @@ func (h *Handler) updateAsset(w http.ResponseWriter, r *http.Request) {
 		h.unfavAsset(w, r)
 	case "update":
 		h.updateName(w, r)
-	case "delete":
-		h.removeFav(w, r)
 	default:
 		http.Error(w, "Invalid action", http.StatusBadRequest)
 	}
 }
 
 func (h *Handler) favAsset(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "fav" action
-	panic("fav")
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
+	}
+
+	resID, ok := h.resourceID(r)
+	if !ok {
+		h.handleError(w, NoResourceErr)
+		return
+	}
+
+	req, ok := h.assetReq(r)
+	if !ok {
+		h.handleError(w, NoAssetReqErr)
+		return
+	}
+
+	repo := h.service.Repo()
+	err := repo.AddFav(r.Context(), userID, req.Type, resID)
+
+	if err != nil {
+		h.handleError(w, errors.Wrap("add fav error", err))
+		return
+	}
+
+	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, struct{}{})
 }
 
 func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "unfav" action
-	panic("unfav")
-}
+	userID, ok := h.userID(r)
+	if !ok {
+		h.handleError(w, NoUserErr)
+	}
 
-func (h *Handler) removeFav(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement handling for "delete" action
-	panic("remove")
+	resID, ok := h.resourceID(r)
+	if !ok {
+		h.handleError(w, NoResourceErr)
+		return
+	}
+
+	req, ok := h.assetReq(r)
+	if !ok {
+		h.handleError(w, NoAssetReqErr)
+		return
+	}
+
+	repo := h.service.Repo()
+	err := repo.RemoveFav(r.Context(), userID, req.Type, resID)
+
+	if err != nil {
+		h.handleError(w, errors.Wrap("add fav error", err))
+		return
+	}
+
+	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
+
+	h.handleSuccess(w, struct{}{})
 }
 
 func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
