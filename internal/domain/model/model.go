@@ -66,10 +66,11 @@ type (
 
 	Asset[T Favable] struct {
 		ID
+		Type string
 		Data T
 	}
 )
 
-func NewAsset[T Favable](id, name string, data T) Asset[Favable] {
-	return Asset[Favable]{ID: ID{ID: id, Name: name}, Data: data}
+func NewAsset[T Favable](id, name, assetType string, data T) Asset[Favable] {
+	return Asset[Favable]{ID: ID{ID: id, Name: name}, Type: assetType, Data: data}
 }
