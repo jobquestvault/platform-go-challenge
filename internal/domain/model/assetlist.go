@@ -5,6 +5,7 @@ package model
 var Assets = []Asset[Favable]{
 	NewAsset("e54d8fde-ec90-494b-8f40-e66acfd40fec",
 		"sample-chart",
+		"chart",
 		Chart{
 			ID:         ID{ID: "23fefba1-7276-4f09-8bb7-ea3decea1700", Name: "Sample Chart"},
 			Title:      "Revenue",
@@ -16,6 +17,7 @@ var Assets = []Asset[Favable]{
 	),
 	NewAsset("c7a5d9c8-7d0c-456d-89a5-399b77e5cc79",
 		"sample-insight",
+		"insight",
 		Insight{
 			ID:       ID{ID: "56723ff2-a222-4927-9c6d-c0875b208b9e", Name: "Sample Insight"},
 			Text:     "Lumos Nexus Solutions",
@@ -25,6 +27,7 @@ var Assets = []Asset[Favable]{
 	),
 	NewAsset("c89394c8-b035-4184-bd88-ae1de08a7e31",
 		"sample-audience",
+		"audience",
 		Audience{
 			ID:                  ID{ID: "e284fd63-784d-431b-9372-786b6f3a21f6", Name: "Sample Audience"},
 			Gender:              "female",

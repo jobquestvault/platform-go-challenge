@@ -437,7 +437,7 @@ WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
 				Data:       data,
 				Favorite:   model.Favorite(favorite.Bool),
 			}
-			assets = append(assets, model.NewAsset(id, name, chart))
+			assets = append(assets, model.NewAsset(id, name, assetType, chart))
 
 		case "insight":
 			insight := model.Insight{
@@ -446,7 +446,7 @@ WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
 				Topic:    topic.String,
 				Favorite: model.Favorite(favorite.Bool),
 			}
-			assets = append(assets, model.NewAsset(id, name, insight))
+			assets = append(assets, model.NewAsset(id, name, assetType, insight))
 
 		case "audience":
 			audience := model.Audience{
@@ -458,7 +458,7 @@ WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
 				NumPurchasesLastMth: int(numPurchasesLastMth.Int64),
 				Favorite:            model.Favorite(favorite.Bool),
 			}
-			assets = append(assets, model.NewAsset(id, name, audience))
+			assets = append(assets, model.NewAsset(id, name, assetType, audience))
 		}
 	}
 
