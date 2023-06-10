@@ -26,14 +26,12 @@ type Chart struct {
 	XAxisTitle string
 	YAxisTitle string
 	Data       []uint8
-	Favorite
 }
 
 type Insight struct {
 	ID
 	Text  string
 	Topic string
-	Favorite
 }
 
 type Audience struct {
@@ -43,7 +41,15 @@ type Audience struct {
 	AgeGroup            string
 	HoursSpentOnSocial  int
 	NumPurchasesLastMth int
-	Favorite
+}
+
+type Asset struct {
+	ID
+	UserID      string
+	AssetID     string
+	AssetType   string
+	Name        string
+	Description string
 }
 
 type (
