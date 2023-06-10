@@ -1,0 +1,26 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=ak
+      - DB_PASSWORD=ak
+      - DB_NAME=ak
+
+  db:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=ak
+      - POSTGRES_PASSWORD=ak
+      - POSTGRES_DB=ak
+
