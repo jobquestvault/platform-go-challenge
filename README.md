@@ -51,7 +51,7 @@ $ ./scripts/curl/getassets.sh pretty
         "Favorite": false
       }
     },
-
+    ...
 ```
 
 ### Fav an asset
