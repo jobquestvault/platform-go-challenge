@@ -26,29 +26,48 @@ $ make run
 ```
 
 ### Get all assets
-Charts, Insights and Audiences; both faved and not faved. (*)
-```
-$ ./scripts/curl/getassets.sh pretty
+Charts, Insights and Audiences; both faved and not faved. 
+Here, `pretty` uses jq to format the output (*) and `1` and `14` are the page and page size respectively.
 
+```
+$ ./scripts/curl/getassets.sh pretty 1 14
+Request URL: http://localhost:8080/api/v1/c03dc326-7160-4b63-ac36-7105a4c96fa3/assets?page=1&size=14
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100  7761    0  7761    0     0  1901k      0 --:--:-- --:--:-- --:--:-- 2526k
+100  4727    0  4727    0     0   332k      0 --:--:-- --:--:-- --:--:--  329k
 {
   "success": true,
-  "message": "count: 30",
+  "count": 14,
+  "pages": 2,
   "data": [
     {
-      "ID": "32f92457-de96-4f0f-bfd1-9a382a198fd2",
-      "Name": "Chart 1",
-      "Type": "chart",
+      "ID": "146012c3-5fac-491f-8764-84741e223231",
+      "Type": "insight",
+      "UserID": "",
+      "AssetID": "146012c3-5fac-491f-8764-84741e223231",
+      "Name": "Insight 10",
+      "Description": "⭐ Insight 10",
       "Data": {
-        "ID": "32f92457-de96-4f0f-bfd1-9a382a198fd2",
-        "Name": "Chart 1",
-        "Title": "Title 1",
-        "XAxisTitle": "X-Axis Title 1",
-        "YAxisTitle": "Y-Axis Title 1",
-        "Data": "ezEuMCwyLjAsMy4wfQ==",
-        "Favorite": false
+        "ID": "146012c3-5fac-491f-8764-84741e223231",
+        "Name": "Insight 10",
+        "Text": "Text 10",
+        "Topic": "Topic 10"
+      }
+    },
+    {
+      "ID": "15372e01-2ff5-4ec1-a2b8-9cb183933606",
+      "Type": "chart",
+      "UserID": "",
+      "AssetID": "15372e01-2ff5-4ec1-a2b8-9cb183933606",
+      "Name": "johndoe-chart-1",
+      "Description": "Faved chart by johndoe",
+      "Data": {
+        "ID": "15372e01-2ff5-4ec1-a2b8-9cb183933606",
+        "Type": "chart",
+        "Title": "Title 10",
+        "XAxisTitle": "X-Axis Title 10",
+        "YAxisTitle": "Y-Axis Title 10",
+        "Data": "{123, 49, 48, 44, 50, 48, 44, 51, 48, 125}"
       }
     },
     ...
@@ -56,14 +75,29 @@ $ ./scripts/curl/getassets.sh pretty
 
 ### Fav an asset
 ```
-$ sh scripts/curl/favunfav.sh fav 32f92457-de96-4f0f-bfd1-9a382a198fd2
-{"success":true,"data":{}}
+$./scripts/curl/favunfav.sh fav insight 146012c3-5fac-491f-8764-84741e223231
+Request URL: http://localhost:8080/api/v1/efd8cec6-3e45-4fb1-b0d7-3a1be9cfae2c/assets/146012c3-5fac-491f-8764-84741e223231
+JSON Body: {
+  "type": "insight",
+  "action": "fav",
+  "name": "Asset Name",
+  "description": "Asset Description"
+}
+{"success":true,"count":1,"data":""}
 ```
 
 ### Unfav an asset
 ```
-$ sh scripts/curl/favunfav.sh unfav 32f92457-de96-4f0f-bfd1-9a382a198fd2
-{"success":true,"data":{}}
+$./scripts/curl/favunfav.sh unfav insight 146012c3-5fac-491f-8764-84741e223231
+Request URL: http://localhost:8080/api/v1/efd8cec6-3e45-4fb1-b0d7-3a1be9cfae2c/assets/146012c3-5fac-491f-8764-84741e223231
+JSON Body: {
+  "type": "insight",
+  "action": "unfav",
+  "name": "Asset Name",
+  "description": "Asset Description"
+}
+{"success":true,"count":1,"data":""}
+
 ```
 
 ### Update name of a faved asset
@@ -95,6 +129,17 @@ $ yum update -y
 $ yum install jq -y
 ...
 ```
+
+## Considerations
+* A database [migrator](https://github.com/adrianpk/migration) could be helpful for database initialization.
+At the moment all the script for database initial setup reside here:
+
+* [Migrations](/scripts/sql/pg/migrations)
+* [Fixtures](/scripts/sql/pg/fixtures)
+
+## Todo
+* Improve test coverage.
+* Add Godoc comments.
 
 ## Notes
 
