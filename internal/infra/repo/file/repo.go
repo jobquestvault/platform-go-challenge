@@ -39,7 +39,6 @@ func NewFileAssetRepo() (*FileAssetRepo, error) {
 	}, nil
 }
 
-// Helper function to generate a random temporary file name
 func generateTempFileName() (string, error) {
 	file, err := os.CreateTemp("", "assets-")
 	if err != nil {
@@ -82,13 +81,11 @@ func (fr *FileAssetRepo) GetFaved(ctx context.Context, userID string, page, size
 	start := (page - 1) * size
 	end := start + size
 
-	// Read favorite data from the fav file
 	favs, err := fr.readFavoritesFromFile()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Collect favorite asset IDs for the given user
 	favIDs := make([]string, 0)
 	for _, fav := range favs {
 		if fav.UserID == userID {
@@ -96,13 +93,11 @@ func (fr *FileAssetRepo) GetFaved(ctx context.Context, userID string, page, size
 		}
 	}
 
-	// Read assets from the asset file
 	assets, err := fr.readAssetsFromFile()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Collect favorite assets
 	favAssets := make([]model.Asset[model.Favable], 0)
 	for _, asset := range assets {
 		if contains(favIDs, asset.GetID()) {
@@ -110,7 +105,6 @@ func (fr *FileAssetRepo) GetFaved(ctx context.Context, userID string, page, size
 		}
 	}
 
-	// Perform pagination
 	if start >= len(favAssets) {
 		return nil, 0, nil
 	}
@@ -119,34 +113,28 @@ func (fr *FileAssetRepo) GetFaved(ctx context.Context, userID string, page, size
 	}
 	favAssets = favAssets[start:end]
 
-	// Calculate total pages
 	totalPages := (len(favAssets) + size - 1) / size
 
 	return favAssets, totalPages, nil
 }
 
 func (fr *FileAssetRepo) AddFav(ctx context.Context, userID, assetType, assetID string) error {
-	// Read favorite data from the fav file
 	favs, err := fr.readFavoritesFromFile()
 	if err != nil {
 		return err
 	}
 
-	// Check if the asset is already favorited by the user
 	if isFavorited(favs, userID, assetID) {
 		return errors.NewError("asset already favorited by the user")
 	}
 
-	// Create a new favorite
 	fav := FavData{
 		UserID:  userID,
 		AssetID: assetID,
 	}
 
-	// Append the new favorite to the existing favorites
 	favs = append(favs, fav)
 
-	// Write the updated favorites back to the fav file
 	err = fr.writeFavoritesToFile(favs)
 	if err != nil {
 		return err
@@ -161,7 +149,6 @@ func (far *FileAssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, 
 		return err
 	}
 
-	// Find the asset by ID
 	var found bool
 	for i, asset := range assets {
 		if asset.ID == ID && asset.Type == assetType {
@@ -177,7 +164,6 @@ func (far *FileAssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, 
 		return errors.NewError("asset not found")
 	}
 
-	// Save the updated assets to the file
 	err = far.saveAssets(assets)
 	if err != nil {
 		return err
@@ -187,13 +173,11 @@ func (far *FileAssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, 
 }
 
 func (fr *FileAssetRepo) RemoveFav(ctx context.Context, userID, assetType, assetID string) error {
-	// Read favorite data from the fav file
 	favs, err := fr.readFavoritesFromFile()
 	if err != nil {
 		return err
 	}
 
-	// Find the index of the favorite to be removed
 	index := -1
 	for i, fav := range favs {
 		if fav.UserID == userID && fav.AssetID == assetID {
@@ -202,15 +186,12 @@ func (fr *FileAssetRepo) RemoveFav(ctx context.Context, userID, assetType, asset
 		}
 	}
 
-	// If the favorite is not found, return an error
 	if index == -1 {
 		return errors.NewError("asset is not favorited by the user")
 	}
 
-	// Remove the favorite from the slice
 	favs = append(favs[:index], favs[index+1:]...)
 
-	// Write the updated favorites back to the fav file
 	err = fr.writeFavoritesToFile(favs)
 	if err != nil {
 		return err
@@ -220,13 +201,11 @@ func (fr *FileAssetRepo) RemoveFav(ctx context.Context, userID, assetType, asset
 }
 
 func (fr *FileAssetRepo) readAssetsFromFile() ([]model.Asset[model.Favable], error) {
-	// Read the asset file
 	assetBytes, err := ioutil.ReadFile(fr.assetFile)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal the JSON data into assets
 	var assets []model.Asset[model.Favable]
 	err = json.Unmarshal(assetBytes, &assets)
 	if err != nil {
@@ -237,13 +216,11 @@ func (fr *FileAssetRepo) readAssetsFromFile() ([]model.Asset[model.Favable], err
 }
 
 func (fr *FileAssetRepo) readFavoritesFromFile() ([]FavData, error) {
-	// Read the fav file
 	favBytes, err := ioutil.ReadFile(fr.favFile)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal the JSON data into favorites
 	var favorites []FavData
 	err = json.Unmarshal(favBytes, &favorites)
 	if err != nil {
@@ -254,13 +231,11 @@ func (fr *FileAssetRepo) readFavoritesFromFile() ([]FavData, error) {
 }
 
 func (fr *FileAssetRepo) writeFavoritesToFile(favorites []FavData) error {
-	// Marshal the favorites to JSON
 	favBytes, err := json.Marshal(favorites)
 	if err != nil {
 		return err
 	}
 
-	// Write the JSON data to the fav file
 	err = ioutil.WriteFile(fr.favFile, favBytes, 0644)
 	if err != nil {
 		return err

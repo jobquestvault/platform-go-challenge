@@ -6,7 +6,7 @@ import (
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/infra/db/pg"
 	"github.com/jobquestvault/platform-go-challenge/internal/infra/http"
-	pgr "github.com/jobquestvault/platform-go-challenge/internal/infra/repo/pg"
+	"github.com/jobquestvault/platform-go-challenge/internal/infra/repo/file"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
@@ -39,7 +39,11 @@ func (app *App) Setup(ctx context.Context) error {
 	}
 
 	// Repo
-	repo := pgr.NewAssetRepo(db, log, cfg)
+	//repo.go := pgr.NewAssetRepo(db, log, cfg)
+	repo, err := file.NewFileAssetRepo()
+	if err != nil {
+		return errors.Wrap("app setup error", err)
+	}
 
 	// Services
 	svc := service.NewService(repo, log, cfg)

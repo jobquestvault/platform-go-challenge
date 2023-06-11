@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Usage: ./scripts/curl/fav.sh [action] [asset_type] [asset_id]
+# Format
+# ./scripts/curl/favunfav.sh [action] [asset_type] [asset_id]
+# ./scripts/curl/favunfav.sh fav insight 146012c3-5fac-491f-8764-84741e223231
+# ./scripts/curl/favunfav.sh unfav insight 146012c3-5fac-491f-8764-84741e223231
 
 # Editable variables
 HOSTNAME="localhost"
@@ -9,7 +12,7 @@ USER="efd8cec6-3e45-4fb1-b0d7-3a1be9cfae2c"
 
 # Default values for action and asset ID
 DEFAULT_ACTION="fav"
-DEFAULT_ASSET_ID="32f92457-de96-4f0f-bfd1-9a382a198fd2"
+DEFAULT_ASSET_ID="15372e01-2ff5-4ec1-a2b8-9cb183933606"
 
 # Command-line parameters
 ACTION=${1:-$DEFAULT_ACTION}
@@ -24,7 +27,7 @@ JSON_BODY=$(cat <<EOF
 {
   "type": "$ASSET_TYPE",
   "action": "$ACTION",
-  "name": "Asset Name"
+  "name": "Asset Name",
   "description": "Asset Description"
 }
 EOF

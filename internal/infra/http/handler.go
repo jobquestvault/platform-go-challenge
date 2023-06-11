@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 
-	"github.com/jobquestvault/platform-go-challenge/internal/domain/port"
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/service"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/cfg"
@@ -30,7 +30,10 @@ type (
 	EmptyResponse string
 )
 
-const emptyRes = ""
+const (
+	emptyRes    = ""
+	defPageSize = 12
+)
 
 func NewHandler(svc service.AssetService, log log.Logger, cfg *cfg.Config) *Handler {
 	return &Handler{
@@ -76,7 +79,7 @@ func (h *Handler) handleAPIV1(w http.ResponseWriter, r *http.Request) {
 	case "assets":
 		h.handleAssets(w, r)
 	case "faved":
-		h.handleFavs(w, r)
+		h.handleFaved(w, r)
 	default:
 		h.handleError(w, InvalidResourceErr)
 	}
@@ -94,12 +97,10 @@ func (h *Handler) handleAssets(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) handleFavs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleFaved(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.getFaved(w, r)
-	case http.MethodPut:
-		h.updateAsset(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		h.handleError(w, MethodNotAllowedErr)
@@ -107,22 +108,16 @@ func (h *Handler) handleFavs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getAssets(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.userID(r)
-	if !ok {
-		h.handleError(w, NoUserErr)
-		return
-	}
+	page, size := h.pageAndSize(r)
 
 	repo := h.service.Repo()
-	assets, err := repo.GetAssets(r.Context(), userID)
+	assets, pages, err := repo.GetAssets(r.Context(), page, size)
 	if err != nil {
 		h.handleError(w, errors.Wrap("get assets error", err))
 		return
 	}
 
-	msg := fmt.Sprintf("count: %d", len(assets))
-
-	h.handleSuccess(w, assets, msg)
+	h.handleSuccess(w, assets, len(assets), pages)
 }
 
 func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
@@ -133,15 +128,37 @@ func (h *Handler) getFaved(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repo := h.service.Repo()
-	assets, err := repo.GetAssets(r.Context(), userID, port.Faved)
+	assets, pages, err := repo.GetFaved(r.Context(), userID, 1, 40)
 	if err != nil {
 		h.handleError(w, errors.Wrap("get faved error", err))
 		return
 	}
 
-	msg := fmt.Sprintf("count: %d", len(assets))
+	h.handleSuccess(w, assets, len(assets), pages)
+}
 
-	h.handleSuccess(w, assets, msg)
+func (h *Handler) createAsset(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleError(w, InvalidRequestErr)
+	}
+
+	var req AssetRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		h.handleError(w, InvalidRequestDataErr)
+	}
+
+	ctx := context.WithValue(r.Context(), AssetReqCtxKey, req)
+	r = r.WithContext(ctx)
+
+	switch req.Action {
+	case "fav":
+		h.favAsset(w, r)
+
+	default:
+		http.Error(w, "Invalid action", http.StatusBadRequest)
+	}
 }
 
 func (h *Handler) updateAsset(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +183,30 @@ func (h *Handler) updateAsset(w http.ResponseWriter, r *http.Request) {
 		h.unfavAsset(w, r)
 	case "update":
 		h.updateName(w, r)
+	default:
+		http.Error(w, "Invalid action", http.StatusBadRequest)
+	}
+}
+
+func (h *Handler) deleteAsset(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleError(w, InvalidRequestErr)
+	}
+
+	var req AssetRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		h.handleError(w, InvalidRequestDataErr)
+	}
+
+	ctx := context.WithValue(r.Context(), AssetReqCtxKey, req)
+	r = r.WithContext(ctx)
+
+	switch req.Action {
+	case "unfav":
+		h.unfavAsset(w, r)
+
 	default:
 		http.Error(w, "Invalid action", http.StatusBadRequest)
 	}
@@ -197,9 +238,7 @@ func (h *Handler) favAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
-
-	h.handleSuccess(w, emptyRes)
+	h.handleSuccess(w, emptyRes, 1, 0)
 }
 
 func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
@@ -224,13 +263,11 @@ func (h *Handler) unfavAsset(w http.ResponseWriter, r *http.Request) {
 	err := repo.RemoveFav(r.Context(), userID, req.Type, resID)
 
 	if err != nil {
-		h.handleError(w, errors.Wrap("add fav error", err))
+		h.handleError(w, errors.Wrap("remove fav error", err))
 		return
 	}
 
-	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
-
-	h.handleSuccess(w, emptyRes)
+	h.handleSuccess(w, emptyRes, 1, 0)
 }
 
 func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
@@ -252,14 +289,38 @@ func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repo := h.service.Repo()
-	err := repo.UpdateFav(r.Context(), userID, req.Type, resID, req.Name)
+	err := repo.UpdateFav(r.Context(), userID, req.Type, resID, req.Name, req.Description)
 
 	if err != nil {
 		h.handleError(w, errors.Wrap("update fav error", err))
 		return
 	}
 
-	//msg := fmt.Sprintf("Reg. count: %d", len(assets))
+	h.handleSuccess(w, emptyRes, 1, 0)
+}
 
-	h.handleSuccess(w, emptyRes)
+func (h *Handler) pageAndSize(r *http.Request) (page, size int) {
+	params := r.URL.Query()
+
+	p := params.Get("page")
+	if p == "" {
+		page = 1
+	}
+
+	s := params.Get("size")
+	if s == "" {
+		s = fmt.Sprintf("%d", h.Cfg().Prop.PageSize)
+	}
+
+	page, err := strconv.Atoi(p)
+	if err != nil {
+		page = 1
+	}
+
+	size, err = strconv.Atoi(s)
+	if err != nil {
+		size = defPageSize
+	}
+
+	return page, size
 }
