@@ -9,9 +9,10 @@ import (
 type ContextKey string
 
 type AssetRequest struct {
-	Type   string `json:"type"`
-	Action string `json:"action"`
-	Name   string `json:"name"`
+	Type        string `json:"type"`
+	Action      string `json:"action"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 const (

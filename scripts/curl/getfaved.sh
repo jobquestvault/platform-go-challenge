@@ -1,9 +1,13 @@
 #!/bin/bash
 
+# Format
+# ./scripts/curl/getfaved.sh [user_id] [page] [size] [pretty]
+# ./scripts/curl/getfaved.sh efd8cec6-3e45-4fb1-b0d7-3a1be9cfae2c 1 12 pretty
+
 # Editable variables
 HOSTNAME="localhost"
 PORT="8080"
-USER="c03dc326-7160-4b63-ac36-7105a4c96fa3"
+USER="efd8cec6-3e45-4fb1-b0d7-3a1be9cfae2c
 
 # Default values for page and size
 DEFAULT_PAGE="1"
@@ -14,7 +18,7 @@ PAGE=${2:-$DEFAULT_PAGE}
 SIZE=${3:-$DEFAULT_SIZE}
 
 # API endpoint URL
-URL="http://$HOSTNAME:$PORT/api/v1/$USER/assets?page=$PAGE&size=$SIZE"
+URL="http://$HOSTNAME:$PORT/api/v1/$USER/faved?page=$PAGE&size=$SIZE"
 
 # Echo the URL
 echo "Request URL: $URL"

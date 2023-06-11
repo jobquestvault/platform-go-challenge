@@ -4,419 +4,367 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 
-	"github.com/lib/pq"
+	"github.com/google/uuid"
 
 	"github.com/jobquestvault/platform-go-challenge/internal/domain/model"
-	"github.com/jobquestvault/platform-go-challenge/internal/domain/port"
 	"github.com/jobquestvault/platform-go-challenge/internal/sys/errors"
 )
 
-// Charts
-
-// GetAllCharts retrieves all charts from the database
-func (ar *AssetRepo) GetAllCharts(ctx context.Context) (charts []model.Chart, err error) {
+func (ar *AssetRepo) GetAssets(ctx context.Context, page, size int) ([]model.Asset[model.Favable], int, error) {
 	db, ok := ar.PgDB()
 	if !ok {
-		return charts, NoConnectionErr
+		return nil, 0, NoConnectionErr
 	}
 
-	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.charts")
+	offset := (page - 1) * size
+
+	query := `
+	SELECT 
+		coalesce(a.asset_id, c.id, i.id, u.id) AS asset_id,
+-- 		coalesce(a.asset_type, 'chart', 'insight', 'audience') AS asset_type,
+    CASE
+        WHEN c.id IS NOT NULL THEN 'chart'
+        WHEN i.id IS NOT NULL THEN 'insight'
+        WHEN u.id IS NOT NULL THEN 'audience'
+        ELSE NULL
+    END AS asset_type,
+		coalesce(a.name, c.name, i.name, u.name) AS name,
+		a.description,
+		c.title,
+		c.x_axis_title,
+		c.y_axis_title,
+		c.data,
+		i.text,
+		i.topic,
+		u.gender,
+		u.birth_country,
+		u.age_group,
+		u.hours_spent_on_social,
+		u.num_purchases_last_month
+	FROM
+		ak.assets a
+	FULL OUTER JOIN
+		ak.charts c ON a.asset_id = c.id AND a.asset_type = 'chart'
+	FULL OUTER JOIN
+		ak.insights i ON a.asset_id = i.id AND a.asset_type = 'insight'
+	FULL OUTER JOIN
+		ak.audiences u ON a.asset_id = u.id AND a.asset_type = 'audience'
+	ORDER BY
+		asset_id
+	LIMIT $1
+	OFFSET $2
+`
+
+	rows, err := db.QueryContext(ctx, query, size, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var chart model.Chart
-		err := rows.Scan(&chart.ID, &chart.Title, &chart.XAxisTitle, &chart.YAxisTitle, pq.Array(&chart.Data), chart.Faved())
-		if err != nil {
-			return nil, err
-		}
-		charts = append(charts, chart)
-	}
-
-	return charts, nil
-}
-
-// GetChartByID retrieves a specific chart by its ID from the database
-func (ar *AssetRepo) GetChartByID(ctx context.Context, id string) (chart model.Chart, err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return chart, NoConnectionErr
-	}
-
-	err = db.QueryRowContext(ctx, "SELECT * FROM ak.charts WHERE id = $1", id).Scan(&chart.ID, &chart.Title, &chart.XAxisTitle, &chart.YAxisTitle, pq.Array(&chart.Data), chart.Faved())
-	if err != nil {
-		return chart, err
-	}
-	return chart, nil
-}
-
-// CreateChart creates a new chart in the database
-func (ar *AssetRepo) CreateChart(ctx context.Context, chart model.Chart) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "INSERT INTO ak.charts (id, title, x_axis_title, y_axis_title, data, favorite) VALUES ($1, $2, $3, $4, $5, $6)", chart.ID, chart.Title, chart.XAxisTitle, chart.YAxisTitle, pq.Array(chart.Data), chart.Faved())
-	return err
-}
-
-// UpdateChart updates an existing chart in the database
-func (ar *AssetRepo) UpdateChart(ctx context.Context, chart model.Chart) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "UPDATE ak.charts SET title = $2, x_axis_title = $3, y_axis_title = $4, data = $5, favorite = $6 WHERE id = $1", chart.ID, chart.Title, chart.XAxisTitle, chart.YAxisTitle, pq.Array(chart.Data), chart.Faved())
-	return err
-}
-
-// DeleteChart deletes a chart from the database by its ID
-func (ar *AssetRepo) DeleteChart(ctx context.Context, id string) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "DELETE FROM ak.charts WHERE id = $1", id)
-	return err
-}
-
-// Insights
-
-// GetAllInsights retrieves all insights from the database
-func (ar *AssetRepo) GetAllInsights(ctx context.Context) (insight []model.Insight, err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return insight, NoConnectionErr
-	}
-
-	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.insights")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var insights []model.Insight
-	for rows.Next() {
-		var insight model.Insight
-		err := rows.Scan(&insight.ID, &insight.Text, &insight.Topic, insight.Faved())
-		if err != nil {
-			return nil, err
-		}
-		insights = append(insights, insight)
-	}
-
-	return insights, nil
-}
-
-// GetInsightByID retrieves a specific insight by its ID from the database
-func (ar *AssetRepo) GetInsightByID(ctx context.Context, id string) (insight model.Insight, err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return insight, NoConnectionErr
-	}
-
-	err = db.QueryRowContext(ctx, "SELECT * FROM ak.insights WHERE id = $1", id).Scan(&insight.ID, &insight.Text, &insight.Topic, insight.Faved())
-	if err != nil {
-		return insight, err
-	}
-	return insight, nil
-}
-
-// CreateInsight creates a new insight in the database
-func (ar *AssetRepo) CreateInsight(ctx context.Context, insight model.Insight) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "INSERT INTO ak.insights (id, text, topic, favorite) VALUES ($1, $2, $3, $4)", insight.ID, insight.Text, insight.Topic, insight.Faved())
-	return err
-}
-
-// UpdateInsight updates an existing insight in the database
-func (ar *AssetRepo) UpdateInsight(ctx context.Context, insight model.Insight) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "UPDATE ak.insights SET text = $2, topic = $3, favorite = $4 WHERE id = $1", insight.ID, insight.Text, insight.Topic, insight.Faved())
-	return err
-}
-
-// DeleteInsight deletes an insight from the database by its ID
-func (ar *AssetRepo) DeleteInsight(ctx context.Context, id string) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "DELETE FROM ak.insights WHERE id = $1", id)
-	return err
-}
-
-// Audiences
-
-// GetAllAudiences retrieves all audiences from the database
-func (ar *AssetRepo) GetAllAudiences(ctx context.Context) (audiences []model.Audience, err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return nil, NoConnectionErr
-	}
-
-	rows, err := db.QueryContext(ctx, "SELECT * FROM ak.audiences")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var audience model.Audience
-		err := rows.Scan(&audience.ID, &audience.Gender, &audience.BirthCountry, &audience.AgeGroup, &audience.HoursSpentOnSocial, &audience.NumPurchasesLastMth, audience.Faved())
-		if err != nil {
-			return nil, err
-		}
-		audiences = append(audiences, audience)
-	}
-
-	return audiences, nil
-}
-
-// GetAudienceByID retrieves a specific audience by its ID from the database
-func (ar *AssetRepo) GetAudienceByID(ctx context.Context, id string) (audience model.Audience, err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return audience, NoConnectionErr
-	}
-
-	err = db.QueryRowContext(ctx, "SELECT * FROM ak.audiences WHERE id = $1", id).Scan(&audience.ID, &audience.Gender, &audience.BirthCountry, &audience.AgeGroup, &audience.HoursSpentOnSocial, &audience.NumPurchasesLastMth, audience.Faved())
-	if err != nil {
-		return model.Audience{}, err
-	}
-	return audience, nil
-}
-
-// CreateAudience creates a new audience in the database
-func (ar *AssetRepo) CreateAudience(ctx context.Context, audience model.Audience) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "INSERT INTO ak.audiences (id, gender, birth_country, age_group, hours_spent_on_social, num_purchases_last_mth, favorite) VALUES ($1, $2, $3, $4, $5, $6, $7)", audience.ID, audience.Gender, audience.BirthCountry, audience.AgeGroup, audience.HoursSpentOnSocial, audience.NumPurchasesLastMth, audience.Faved())
-	return err
-}
-
-// UpdateAudience updates an existing audience in the database
-func (ar *AssetRepo) UpdateAudience(ctx context.Context, audience model.Audience) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "UPDATE ak.audiences SET gender = $2, birth_country = $3, age_group = $4, hours_spent_on_social = $5, num_purchases_last_mth = $6, favorite = $7 WHERE id = $1", audience.ID, audience.Gender, audience.BirthCountry, audience.AgeGroup, audience.HoursSpentOnSocial, audience.NumPurchasesLastMth, audience.Faved())
-	return err
-}
-
-// DeleteAudience deletes an audience from the database
-func (ar *AssetRepo) DeleteAudience(ctx context.Context, id string) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	_, err := db.ExecContext(ctx, "DELETE FROM ak.audiences WHERE id = $1", id)
-	return err
-}
-
-// AddFav mark an asset as faved
-func (ar *AssetRepo) AddFav(ctx context.Context, userID, assetType, ID string) error {
-	return ar.setFav(ctx, userID, assetType, ID, true)
-}
-
-// RemoveFav mark an asset as not faved
-func (ar *AssetRepo) RemoveFav(ctx context.Context, userID, assetType, ID string) error {
-	return ar.setFav(ctx, userID, assetType, ID, false)
-}
-
-// AddFav mark an asset as faved
-func (ar *AssetRepo) setFav(ctx context.Context, userID, assetType, ID string, favVal bool) error {
-	err := ar.validateAssetType(assetType)
-	if err != nil {
-		return errors.Wrap("set fav value error", err)
-	}
-
-	var table string
-	table, err = ar.assetTable(assetType)
-	if err != nil {
-		return errors.Wrap("set fav value error", err)
-	}
-
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	query := fmt.Sprintf("UPDATE ak.%s SET favorite = $3 WHERE id = $1 AND user_id = $2", table)
-	_, err = db.ExecContext(ctx, query, ID, userID, favVal)
-	if err != nil {
-		return errors.Wrap("set fav repo error", err)
-
-	}
-
-	return nil
-}
-
-// UpdateFav updates asset name
-func (ar *AssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, name string) error {
-	db, ok := ar.PgDB()
-	if !ok {
-		return NoConnectionErr
-	}
-
-	// Update the name of the favorited asset
-	assetTable, err := ar.assetTable(assetType)
-	if err != nil {
-		return UnsupportedAssetErr
-	}
-
-	updateQuery := `
-		UPDATE ` + assetTable + ` AS a
-		SET name = $1
-		FROM ak.users AS u
-		WHERE a.id = $2 AND a.favorite = TRUE AND a.user_id = u.id AND u.id = $3
-	`
-	result, err := db.ExecContext(ctx, updateQuery, name, ID, userID)
-	if err != nil {
-		return errors.Wrap("update fav repo error", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap("update fav repo error", err)
-	}
-
-	if rowsAffected == 0 {
-		return NoRecordsAffectedErr
-	}
-
-	return nil
-}
-
-func (ar *AssetRepo) GetAssets(ctx context.Context, userID string, status ...port.AssetStatus) (assets []model.Asset[model.Favable], err error) {
-	db, ok := ar.PgDB()
-	if !ok {
-		return assets, NoConnectionErr
-	}
-
-	var favCondition string
-	if len(status) > 0 {
-		switch status[0] {
-		case port.Faved:
-			favCondition = " AND favorite = TRUE "
-		case port.NotFaved:
-			favCondition = " AND (favorite = FALSE OR favorite IS NULL) "
-		}
-	}
-
-	query := fmt.Sprintf(`
-SELECT id, name, user_id, 'chart' AS type, title, x_axis_title, y_axis_title, data, favorite, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-FROM ak.charts
-WHERE user_id = $1%s
-UNION ALL
-SELECT id, name, user_id, 'insight' AS type, NULL, NULL, NULL, NULL, favorite, text, topic, NULL, NULL, NULL, NULL, NULL
-FROM ak.insights
-WHERE user_id = $1%s
-UNION ALL
-SELECT id, name, user_id, 'audience' AS type, NULL, NULL, NULL, NULL, favorite, NULL, NULL, gender, birth_country, age_group, NULL, NULL
-FROM ak.audiences
-WHERE user_id = $1%s`, favCondition, favCondition, favCondition)
-
-	stmt, err := db.PrepareContext(ctx, query)
-	if err != nil {
-		return assets, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.QueryContext(ctx, userID)
-	if err != nil {
-		return assets, err
-	}
-	defer rows.Close()
+	assets := make([]model.Asset[model.Favable], 0)
 
 	for rows.Next() {
 		var (
-			id                  string
-			name                string
-			userID              string
-			assetType           string
-			favorite            sql.NullBool
-			title               sql.NullString
-			xaxisTitle          sql.NullString
-			yaxisTitle          sql.NullString
-			data                []uint8
-			text                sql.NullString
-			topic               sql.NullString
-			gender              sql.NullString
-			birthCountry        sql.NullString
-			ageGroup            sql.NullString
-			hoursSpentOnSocial  sql.NullInt64
-			numPurchasesLastMth sql.NullInt64
+			assetID                       string
+			assetType                     string
+			name                          sql.NullString
+			description                   sql.NullString
+			chartTitle                    sql.NullString
+			chartXAxisTitle               sql.NullString
+			chartYAxisTitle               sql.NullString
+			chartData                     []uint8
+			insightText                   sql.NullString
+			insightTopic                  sql.NullString
+			audienceGender                sql.NullString
+			audienceBirthCountry          sql.NullString
+			audienceAgeGroup              sql.NullString
+			audienceHoursSpentOnSocial    sql.NullInt64
+			audienceNumPurchasesLastMonth sql.NullInt64
 		)
 
-		err = rows.Scan(&id, &name, &userID, &assetType, &title, &xaxisTitle, &yaxisTitle, &data, &favorite, &text, &topic, &gender, &birthCountry, &ageGroup, &hoursSpentOnSocial, &numPurchasesLastMth)
+		err := rows.Scan(
+			&assetID,
+			&assetType,
+			&name,
+			&description,
+			&chartTitle,
+			&chartXAxisTitle,
+			&chartYAxisTitle,
+			&chartData,
+			&insightText,
+			&insightTopic,
+			&audienceGender,
+			&audienceBirthCountry,
+			&audienceAgeGroup,
+			&audienceHoursSpentOnSocial,
+			&audienceNumPurchasesLastMonth,
+		)
 		if err != nil {
-			return assets, err
+			return nil, 0, err
 		}
 
 		switch assetType {
 		case "chart":
 			chart := model.Chart{
-				ID:         model.ID{ID: id, Name: name},
-				Title:      title.String,
-				XAxisTitle: xaxisTitle.String,
-				YAxisTitle: yaxisTitle.String,
-				Data:       data,
-				Favorite:   model.Favorite(favorite.Bool),
+				ID:         model.ID{ID: assetID, Name: name.String},
+				Title:      chartTitle.String,
+				XAxisTitle: chartXAxisTitle.String,
+				YAxisTitle: chartYAxisTitle.String,
+				Data:       chartData,
 			}
-			assets = append(assets, model.NewAsset(id, name, assetType, chart))
-
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, chart))
 		case "insight":
 			insight := model.Insight{
-				ID:       model.ID{ID: id, Name: name},
-				Text:     text.String,
-				Topic:    topic.String,
-				Favorite: model.Favorite(favorite.Bool),
+				ID:    model.ID{ID: assetID, Name: name.String},
+				Text:  insightText.String,
+				Topic: insightTopic.String,
 			}
-			assets = append(assets, model.NewAsset(id, name, assetType, insight))
-
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, insight))
 		case "audience":
 			audience := model.Audience{
-				ID:                  model.ID{ID: id, Name: name},
-				Gender:              gender.String,
-				BirthCountry:        birthCountry.String,
-				AgeGroup:            ageGroup.String,
-				HoursSpentOnSocial:  int(hoursSpentOnSocial.Int64),
-				NumPurchasesLastMth: int(numPurchasesLastMth.Int64),
-				Favorite:            model.Favorite(favorite.Bool),
+				ID:                    model.ID{ID: assetID, Name: name.String},
+				Gender:                audienceGender.String,
+				BirthCountry:          audienceBirthCountry.String,
+				AgeGroup:              audienceAgeGroup.String,
+				HoursSpentOnSocial:    int(audienceHoursSpentOnSocial.Int64),
+				NumPurchasesLastMonth: int(audienceNumPurchasesLastMonth.Int64),
 			}
-			assets = append(assets, model.NewAsset(id, name, assetType, audience))
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, audience))
 		}
 	}
 
-	if err = rows.Err(); err != nil {
-		return assets, err
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
 	}
 
-	return assets, nil
+	countQuery := `
+		SELECT COUNT(*)
+		FROM ak.assets
+	`
+
+	var totalCount int
+	err = db.QueryRowContext(ctx, countQuery).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalPages := int(math.Ceil(float64(totalCount) / float64(size)))
+
+	return assets, totalPages, nil
 }
 
+func (ar *AssetRepo) GetFaved(ctx context.Context, userID string, page, size int) ([]model.Asset[model.Favable], int, error) {
+	db, ok := ar.PgDB()
+	if !ok {
+		return nil, 0, NoConnectionErr
+	}
+
+	offset := (page - 1) * size
+
+	query := `
+	SELECT 
+		coalesce(a.asset_id, c.id, i.id, u.id) AS asset_id,
+    CASE
+        WHEN c.id IS NOT NULL THEN 'chart'
+        WHEN i.id IS NOT NULL THEN 'insight'
+        WHEN u.id IS NOT NULL THEN 'audience'
+        ELSE NULL
+    END AS asset_type,
+		coalesce(a.name, c.name, i.name, u.name) AS name,
+		a.description,
+		c.title,
+		c.x_axis_title,
+		c.y_axis_title,
+		c.data,
+		i.text,
+		i.topic,
+		u.gender,
+		u.birth_country,
+		u.age_group,
+		u.hours_spent_on_social,
+		u.num_purchases_last_month
+	FROM
+		ak.assets a
+	LEFT JOIN 
+		ak.charts c ON a.asset_id = c.id AND a.asset_type = 'chart'
+	LEFT JOIN
+		ak.insights i ON a.asset_id = i.id AND a.asset_type = 'insight'
+	LEFT JOIN
+		ak.audiences u ON a.asset_id = u.id AND a.asset_type = 'audience'
+	WHERE a.user_id = $1
+	ORDER BY
+		asset_id
+	LIMIT $2
+	OFFSET $3
+`
+
+	rows, err := db.QueryContext(ctx, query, userID, size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	assets := make([]model.Asset[model.Favable], 0)
+
+	for rows.Next() {
+		var (
+			assetID                       string
+			assetType                     string
+			name                          sql.NullString
+			description                   sql.NullString
+			chartTitle                    sql.NullString
+			chartXAxisTitle               sql.NullString
+			chartYAxisTitle               sql.NullString
+			chartData                     []uint8
+			insightText                   sql.NullString
+			insightTopic                  sql.NullString
+			audienceGender                sql.NullString
+			audienceBirthCountry          sql.NullString
+			audienceAgeGroup              sql.NullString
+			audienceHoursSpentOnSocial    sql.NullInt64
+			audienceNumPurchasesLastMonth sql.NullInt64
+		)
+
+		err := rows.Scan(
+			&assetID,
+			&assetType,
+			&name,
+			&description,
+			&chartTitle,
+			&chartXAxisTitle,
+			&chartYAxisTitle,
+			&chartData,
+			&insightText,
+			&insightTopic,
+			&audienceGender,
+			&audienceBirthCountry,
+			&audienceAgeGroup,
+			&audienceHoursSpentOnSocial,
+			&audienceNumPurchasesLastMonth,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		switch assetType {
+		case "chart":
+			chart := model.Chart{
+				ID:         model.ID{ID: assetID, Name: name.String},
+				Title:      chartTitle.String,
+				XAxisTitle: chartXAxisTitle.String,
+				YAxisTitle: chartYAxisTitle.String,
+				Data:       chartData,
+			}
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, chart))
+		case "insight":
+			insight := model.Insight{
+				ID:    model.ID{ID: assetID, Name: name.String},
+				Text:  insightText.String,
+				Topic: insightTopic.String,
+			}
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, insight))
+		case "audience":
+			audience := model.Audience{
+				ID:                    model.ID{ID: assetID, Name: name.String},
+				Gender:                audienceGender.String,
+				BirthCountry:          audienceBirthCountry.String,
+				AgeGroup:              audienceAgeGroup.String,
+				HoursSpentOnSocial:    int(audienceHoursSpentOnSocial.Int64),
+				NumPurchasesLastMonth: int(audienceNumPurchasesLastMonth.Int64),
+			}
+			assets = append(assets, model.NewAsset(assetID, name.String, description.String, assetType, audience))
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM ak.assets
+	`
+
+	var totalCount int
+	err = db.QueryRowContext(ctx, countQuery).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalPages := int(math.Ceil(float64(totalCount) / float64(size)))
+
+	return assets, totalPages, nil
+}
+
+func (ar *AssetRepo) AddFav(ctx context.Context, userID, assetType, ID string) error {
+	db, ok := ar.PgDB()
+	if !ok {
+		return NoConnectionErr
+	}
+
+	tableName, err := ar.assetTable(assetType)
+	if err != nil {
+		return UnsupportedAssetErr
+	}
+
+	assetName := fmt.Sprintf("COALESCE((SELECT name FROM %s WHERE id = $3), $4 || '-' || $5 || '-' || RIGHT($5, 8))", tableName)
+	assetDesc := fmt.Sprintf("CONCAT('⭐ ', COALESCE((SELECT name FROM %s WHERE id = $3), $4 || '-' || $5 || '-' || RIGHT($5, 8)))", tableName)
+
+	query := `
+		INSERT INTO assets (id, user_id, asset_id, asset_type, name, description)
+		VALUES ($1, $2, $3, $4::text, ` + assetName + `, ` + assetDesc + `)
+	`
+
+	_, err = db.ExecContext(ctx, query, uuid.New().String(), userID, ID, assetType, ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ar *AssetRepo) UpdateFav(ctx context.Context, userID, assetType, ID, name, description string) error {
+	db, ok := ar.PgDB()
+	if !ok {
+		return NoConnectionErr
+	}
+
+	query := `
+		UPDATE assets
+		SET name = $1, description = $2
+		WHERE user_id = $3 AND asset_type = $4 AND asset_id = $5
+	`
+
+	_, err := db.ExecContext(ctx, query, name, description, userID, assetType, ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ar *AssetRepo) RemoveFav(ctx context.Context, userID, assetType, ID string) error {
+	db, ok := ar.PgDB()
+	if !ok {
+		return NoConnectionErr
+	}
+
+	query := `
+		DELETE FROM assets
+		WHERE user_id = $1 AND asset_type = $2 AND asset_id = $3
+	`
+
+	_, err := db.ExecContext(ctx, query, userID, assetType, ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Helper methods
 func (ar *AssetRepo) validateAssetType(assetType string) error {
 	validAssetTypes := map[string]bool{
 		"chart":    true,

@@ -7,6 +7,7 @@ type (
 		Log    *LogConfig    `json:"log"`
 		Server *ServerConfig `json:"server"`
 		DB     *DBConfig     `json:"db"`
+		Prop   *PropConfig   `json:"prop"`
 	}
 
 	LogConfig struct {
@@ -27,6 +28,10 @@ type (
 		Name     string `json:"name"`
 		SSL      bool   `json:"ssl"`
 	}
+
+	PropConfig struct {
+		PageSize int `json:"page-size"`
+	}
 )
 
 func Load() *Config {
@@ -34,6 +39,7 @@ func Load() *Config {
 		Log:    &LogConfig{},
 		Server: &ServerConfig{},
 		DB:     &DBConfig{},
+		Prop:   &PropConfig{},
 	}
 
 	flag.StringVar(&config.Log.Level, "log-level", "info", "Log level")
@@ -46,6 +52,7 @@ func Load() *Config {
 	flag.StringVar(&config.DB.Schema, "db-schema", "ak", "Database schema")
 	flag.StringVar(&config.DB.Name, "db-name", "ak", "Database name")
 	flag.BoolVar(&config.DB.SSL, "db-ssl", true, "Database use SSL")
+	flag.IntVar(&config.Prop.PageSize, "prop-page-size", 12, "Pagination page size")
 
 	flag.Parse()
 

@@ -10,6 +10,8 @@ import (
 type APIResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message,omitempty"`
+	Count   int         `json:"count,omitempty"`
+	Pages   int         `json:"pages,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
@@ -23,7 +25,7 @@ var (
 	InvalidRequestDataErr = errors.NewError("invalid request data")
 )
 
-func (h *Handler) handleSuccess(w http.ResponseWriter, payload interface{}, msg ...string) {
+func (h *Handler) handleSuccess(w http.ResponseWriter, payload interface{}, count, pages int, msg ...string) {
 	var m string
 	if len(msg) > 0 {
 		m = msg[0]
@@ -32,6 +34,8 @@ func (h *Handler) handleSuccess(w http.ResponseWriter, payload interface{}, msg 
 	response := APIResponse{
 		Success: true,
 		Message: m,
+		Count:   count,
+		Pages:   pages,
 		Data:    payload,
 	}
 
