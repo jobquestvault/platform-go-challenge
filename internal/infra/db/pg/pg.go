@@ -64,7 +64,7 @@ func (db *DB) connString() (connString string) {
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d search_path=%s", user, pass, name, host, port, schema)
 
 	if db.Cfg().DB.SSL {
-		connStr = connStr + " sslmode=require"
+		connStr = connStr + " sslmode=disable"
 	} else {
 		connStr = connStr + " sslmode=disable"
 	}

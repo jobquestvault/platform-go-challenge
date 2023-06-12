@@ -10,10 +10,7 @@ Asset Keeper is a platform that provides users with access to a list of assets. 
 
 This example is not trivial but rather associated with code that could be found in a real production service. However, its implementation aims to avoid over-engineering and instead focuses on meeting specific requirements. The project follows a clear initial organization, although it does not account for every single corner case.
 
-Similar but relatively more complex examples can be found at the following links:
-
-* [DDD Sphere](https://github.com/orgs/dddsphere/repositories) 
-* [Foorester](https://github.com/orgs/foorester/repositories)
+Similar but relatively more complex examples can be found at the following links [here](https://github.com/orgs/dddsphere/repositories), and [here](https://github.com/orgs/foorester/repositories)
 
 Examples of libraries commonly used in various projects include [Zerolog](https://github.com/rs/zerolog) for logging, [Viper](https://github.com/spf13/viper) for 12-Factor configured apps, and [Chi](https://github.com/go-chi/chi) as a routing solution. However, in this case, we have deliberately preferred to prioritize the use of the Go Standard Library whenever possible. It is worth mentioning that the standard library offers production-ready functionality and is widely adopted in real-world implementations.
 
@@ -22,7 +19,16 @@ We have strived to minimize reliance on external dependencies by leveraging the 
 ## Usage
 ### Run the app
 ```
-$ make run
+$ sudo make dockercompose
+```
+Please note that there may be an issue when running containerized applications, where abruptly stopping the container can result in the PostgreSQL data stored in the specified volume being inaccessible. This issue occurs when the postgres-data directory remains owned by previous container executions, causing subsequent attempts to fail. As a good practice, it is advisable to review the makefile commands before executing them. In this case, the series of commands associated with the dockercompose makefile command are as follows:
+Also note that the `docker-compose.yml` file maps the internal port of the app `:8080` to the external one at `:8090`.
+
+```
+$ rm -rf tmp/postgres-data
+$ mkdir -p tmp/postgres-data
+$ chmod -R 777 tmp
+$ docker-compose -f deployments/docker/docker-compose.yml up --build --abort-on-container-exit --remove-orphans
 ```
 
 ### Get all assets
@@ -137,9 +143,12 @@ At the moment all the script for database initial setup reside here:
 * [Migrations](/scripts/sql/pg/migrations)
 * [Fixtures](/scripts/sql/pg/fixtures)
 
+There is some code duplication that is worth removing because the scripts are duplicated for docker compose initialization. 
+
 ## Todo
 * Improve test coverage.
 * Add Godoc comments.
+* Schema `ak.something...` in SQL statements must be obtained dynamically from the configuration or maybe removed because the connectio scripts includes the search path.
 
 ## Notes
 

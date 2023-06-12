@@ -1,0 +1,46 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/dev/Dockerfile
+    ports:
+      - 8090:8080
+    depends_on:
+      - pg
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=ak
+      - DB_PASSWORD
+      - POSTGRES_SCHEMA=ak
+      - DB_NAME=pgc
+#    command: bash -c "if [ -z $(psql -U ak -h db -tAc 'SELECT 1 FROM pg_database WHERE datname = ''ak''') ]; then /app/scripts/docker/setup.sh; fi && ./ak"
+    command: bash -c "
+      if [ -z \"$(psql -U ak -h db -tAc 'SELECT 1 FROM pg_database WHERE datname = ''ak''')\" ]; then
+      /app/scripts/docker/setup.sh
+      fi
+      ./ak
+      "
+  pg:
+    image: postgres:10.5
+    restart: always
+    environment:
+      - POSTGRES_USER=ak
+      - POSTGRES_PASSWORD=ak
+      - POSTGRES_DB=pgc
+      - POSTGRES_SCHEMA=ak
+      - DB_SSLMODE=require
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - '5438:5432'
+    volumes:
+      - ../../tmp/postgres-data:/var/lib/postgresql/data
+      - ../../tmp/sql:/docker-entrypoint-initdb.d
+
+networks:
+  pg:
+    driver: bridge
