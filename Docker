@@ -1,0 +1,31 @@
+# Start from Alpine image with Go 1.20.3
+FROM golang:1.20.5-alpine3.17 AS builder
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy go.mod and go.sum from the top parent directory
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . ./
+
+# Build the app
+RUN #CGO_ENABLED=0 GOOS=linux go build ./... -v
+RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/ak cmd/ak/main.go
+
+# Use a minimal image as the final base
+FROM alpine:3.17
+WORKDIR /app
+
+# Copy the built binary from the builder stage
+COPY --from=builder /go/bin/ak ./ak
+
+# Port
+EXPOSE 8080
+
+# Entrypoit
+ENTRYPOINT ["./ak"]
