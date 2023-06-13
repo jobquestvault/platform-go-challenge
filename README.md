@@ -146,7 +146,8 @@ At the moment all the script for database initial setup reside here:
 There is some code duplication that is worth removing because the scripts are duplicated for docker compose initialization. 
 
 ## Todo
-* Improve test coverage.
+* Improve test coverage: Started with an example of table based test for repo package, but not completed yet.
+* Implement integration test using a special setup of docker compose customized for tests.
 * Add Godoc comments.
 * Schema `ak.something...` in SQL statements must be obtained dynamically from the configuration or maybe removed because the connectio scripts includes the search path.
 
